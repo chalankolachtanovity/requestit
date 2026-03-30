@@ -79,7 +79,7 @@ function LanguageSwitch({
     <div className="flex items-center rounded-full border border-black/10 bg-white/70 p-1 shadow-sm backdrop-blur">
       <button
         onClick={() => setLanguage("sk")}
-        className={`rounded-full px-3 py-1.5 text-sm transition ${
+        className={`min-h-[40px] rounded-full px-3 py-1.5 text-sm transition ${
           language === "sk"
             ? "bg-[#111111] text-white"
             : "text-black/60 hover:bg-black/[0.04]"
@@ -90,7 +90,7 @@ function LanguageSwitch({
 
       <button
         onClick={() => setLanguage("en")}
-        className={`rounded-full px-3 py-1.5 text-sm transition ${
+        className={`min-h-[40px] rounded-full px-3 py-1.5 text-sm transition ${
           language === "en"
             ? "bg-[#111111] text-white"
             : "text-black/60 hover:bg-black/[0.04]"
@@ -117,18 +117,18 @@ export default function HomePage() {
   const reveal = Math.min(scrollY / 1000, 1);
 
   return (
-    <main className="relative overflow-x-hidden bg-[#f7f7f5] text-[#121212]">
+    <main className="relative overflow-x-clip bg-[#f7f7f5] text-[#121212]">
       <div className="absolute inset-0 overflow-hidden">
-        <GradientOrb className="-left-20 top-10 h-72 w-72 opacity-80" />
-        <GradientOrb className="right-0 top-0 h-80 w-80 opacity-70" />
-        <GradientOrb className="left-1/3 top-[540px] h-96 w-96 opacity-60" />
+        <GradientOrb className="-left-28 top-8 h-64 w-64 opacity-70 sm:-left-20 sm:top-10 sm:h-72 sm:w-72 sm:opacity-80" />
+        <GradientOrb className="-right-12 top-0 h-72 w-72 opacity-60 sm:right-0 sm:h-80 sm:w-80 sm:opacity-70" />
+        <GradientOrb className="left-1/3 top-[560px] h-80 w-80 opacity-50 sm:top-[540px] sm:h-96 sm:w-96 sm:opacity-60" />
       </div>
 
       <div className="relative z-10">
-        <div className="mx-auto max-w-6xl px-6 py-6">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative h-11 w-11 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+          <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm sm:h-11 sm:w-11">
                 <Image
                   src="/logo.png"
                   alt="RequestIt logo"
@@ -138,25 +138,25 @@ export default function HomePage() {
                 />
               </div>
 
-              <div>
-                <p className="text-lg font-semibold tracking-tight">RequestIt</p>
-                <p className="text-xs text-black/45">{t.brand}</p>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold tracking-tight sm:text-lg">RequestIt</p>
+                <p className="truncate text-xs text-black/45">{t.brand}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
               <LanguageSwitch language={language} setLanguage={setLanguage} />
 
               <Link
                 href="/login"
-                className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm text-black/75 shadow-sm backdrop-blur transition hover:bg-white"
+                className="min-h-[42px] rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm text-black/75 shadow-sm backdrop-blur transition hover:bg-white"
               >
                 {t.login}
               </Link>
 
               <Link
                 href="/signup"
-                className="rounded-full bg-[#111111] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                className="min-h-[42px] rounded-full bg-[#111111] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
               >
                 {t.signup}
               </Link>
@@ -164,46 +164,46 @@ export default function HomePage() {
           </header>
         </div>
 
-        <section className="px-6 pb-14 pt-10 md:pt-16">
+        <section className="px-4 pb-12 pt-8 sm:px-6 sm:pb-14 sm:pt-10 md:pt-16">
           <div className="mx-auto max-w-6xl">
-            <div className="grid items-start gap-14 md:grid-cols-[1.05fr_0.95fr]">
+            <div className="grid items-start gap-10 sm:gap-12 md:gap-14 md:grid-cols-[1.05fr_0.95fr]">
               <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/75 px-3 py-1.5 text-xs text-black/60 shadow-sm backdrop-blur">
-                  <div className="h-2 w-2 rounded-full bg-[#66e7ff]" />
-                  <span>{t.badge}</span>
+                <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-black/10 bg-white/75 px-3 py-1.5 text-[11px] leading-5 text-black/60 shadow-sm backdrop-blur sm:text-xs">
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-[#66e7ff]" />
+                  <span className="truncate sm:whitespace-normal">{t.badge}</span>
                 </div>
 
-                <h1 className="max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+                <h1 className="max-w-3xl text-3xl font-bold leading-[1.08] tracking-tight sm:text-4xl md:text-6xl">
                   {t.title}
                 </h1>
 
-                <p className="mt-6 max-w-2xl text-base leading-7 text-black/62 md:text-lg">
+                <p className="mt-4 max-w-2xl text-[15px] leading-7 text-black/62 sm:mt-6 sm:text-base md:text-lg">
                   {t.description}
                 </p>
 
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm text-black/70 shadow-sm">
+                <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
+                  <span className="rounded-full border border-black/10 bg-white/80 px-3 py-2 text-xs text-black/70 shadow-sm sm:px-4 sm:text-sm">
                     {t.pill1}
                   </span>
-                  <span className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm text-black/70 shadow-sm">
+                  <span className="rounded-full border border-black/10 bg-white/80 px-3 py-2 text-xs text-black/70 shadow-sm sm:px-4 sm:text-sm">
                     {t.pill2}
                   </span>
-                  <span className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm text-black/70 shadow-sm">
+                  <span className="rounded-full border border-black/10 bg-white/80 px-3 py-2 text-xs text-black/70 shadow-sm sm:px-4 sm:text-sm">
                     {t.pill3}
                   </span>
                 </div>
 
-                <div className="mt-8 flex flex-wrap gap-3">
+                <div className="mt-7 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
                   <Link
                     href="/signup"
-                    className="rounded-full bg-[#111111] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-[#111111] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
                   >
                     {t.cta}
                   </Link>
 
                   <Link
                     href="/login"
-                    className="rounded-full border border-black/10 bg-white/85 px-5 py-3 text-sm text-black/75 shadow-sm transition hover:bg-white"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black/10 bg-white/85 px-5 py-3 text-sm text-black/75 shadow-sm transition hover:bg-white"
                   >
                     {t.secondary}
                   </Link>
@@ -211,12 +211,12 @@ export default function HomePage() {
               </div>
 
               <div className="relative">
-                <div className="relative overflow-hidden rounded-[2rem] border border-black/10 bg-white/75 p-6 shadow-[0_30px_80px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+                <div className="relative overflow-hidden rounded-[1.6rem] border border-black/10 bg-white/75 p-4 shadow-[0_30px_80px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_35%)]" />
 
                   <div className="relative">
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-black/8 bg-white">
+                    <div className="mb-5 flex items-center gap-3 sm:mb-6 sm:gap-4">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-black/8 bg-white sm:h-14 sm:w-14">
                         <Image
                           src="/logo.png"
                           alt="RequestIt logo"
@@ -225,11 +225,11 @@ export default function HomePage() {
                         />
                       </div>
 
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-black/35">
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-black/35 sm:text-xs">
                           RequestIt
                         </p>
-                        <p className="mt-1 text-xl font-semibold">
+                        <p className="mt-1 truncate text-lg font-semibold sm:text-xl">
                           {t.explainTitle}
                         </p>
                       </div>
@@ -258,7 +258,7 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="mt-6 rounded-3xl border border-black/8 bg-[linear-gradient(135deg,rgba(102,231,255,0.12),rgba(168,85,247,0.10),rgba(244,114,182,0.10),rgba(253,224,71,0.10))] px-4 py-4 text-sm leading-6 text-black/60">
+                    <div className="mt-5 rounded-3xl border border-black/8 bg-[linear-gradient(135deg,rgba(102,231,255,0.12),rgba(168,85,247,0.10),rgba(244,114,182,0.10),rgba(253,224,71,0.10))] px-4 py-4 text-sm leading-6 text-black/60 sm:mt-6">
                       {t.bottomLine}
                     </div>
                   </div>
@@ -269,23 +269,23 @@ export default function HomePage() {
         </section>
 
         <section
-          className="relative z-20 px-6 pb-24 pt-10"
+          className="relative z-20 px-4 pb-16 pt-8 sm:px-6 sm:pb-24 sm:pt-10"
           style={{
             opacity: 0.82 + reveal * 0.18,
             transition: "opacity 300ms ease",
           }}
         >
           <div className="mx-auto max-w-7xl">
-            <div className="mb-8 text-center">
-              <p className="text-xs uppercase tracking-[0.2em] text-black/35">
+            <div className="mb-6 text-center sm:mb-8">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-black/35 sm:text-xs">
                 {t.previewTitle}
               </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#111111] md:text-5xl">
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-[#111111] sm:text-3xl md:text-5xl">
                 Live dashboard + guest mobile flow
               </h2>
             </div>
 
-            <div className="rounded-[2.5rem] border border-black/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.55))] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.10)] backdrop-blur-xl md:p-6">
+            <div className="rounded-[1.8rem] border border-black/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.55))] p-3 shadow-[0_30px_80px_rgba(0,0,0,0.10)] backdrop-blur-xl sm:rounded-[2.5rem] sm:p-4 md:p-6">
               <ProductShowcase language={language} reveal={reveal} />
             </div>
           </div>
