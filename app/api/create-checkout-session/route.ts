@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+    const appUrl = "https://requestit-tez2y.ondigitalocean.app/";
 
     const songLabel = hasCustomSong
       ? `${customTrackName!.trim()} — ${customArtistName!.trim()}`
