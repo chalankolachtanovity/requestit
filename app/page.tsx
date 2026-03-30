@@ -27,7 +27,7 @@ const content = {
     explain2Text: "Na mobile si nájdu pesničku alebo pridajú vlastnú.",
     explain3Title: "Ty riadiš queue",
     explain3Text: "Requesty prijímaš, presúvaš do poradia a priority ti zvyšujú credits.",
-    previewTitle: "RequestIt in action",
+    previewTitle: "SoundQ in action",
     brand: "Hudobné requesty jednoducho",
     bottomLine: "One simple flow for guests. One clean dashboard for DJs.",
   },
@@ -50,7 +50,7 @@ const content = {
     explain2Text: "They search for a song on mobile or add their own.",
     explain3Title: "You control the queue",
     explain3Text: "Accept requests, move them into the queue, and earn from priority.",
-    previewTitle: "RequestIt in action",
+    previewTitle: "SoundQ in action",
     brand: "Song requests made simple",
     bottomLine: "One simple flow for guests. One clean dashboard for DJs.",
   },
@@ -131,17 +131,22 @@ export default function HomePage() {
               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm sm:h-11 sm:w-11">
                 <Image
                   src="/logo.png"
-                  alt="RequestIt logo"
+                  alt="SoundQ logo"
                   fill
                   className="object-cover"
                   priority
                 />
               </div>
 
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold tracking-tight sm:text-lg">RequestIt</p>
-                <p className="truncate text-xs text-black/45">{t.brand}</p>
-              </div>
+              <Image
+                src="/logo_text.png"
+                alt="SoundQ"
+                width={200}
+                height={60}
+                className="h-10 w-auto sm:h-8 md:h-10"
+                priority
+              />
+              
             </div>
 
             <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
@@ -219,15 +224,15 @@ export default function HomePage() {
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-black/8 bg-white sm:h-14 sm:w-14">
                         <Image
                           src="/logo.png"
-                          alt="RequestIt logo"
+                          alt="SoundQ logo"
                           fill
                           className="object-cover"
                         />
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-black/35 sm:text-xs">
-                          RequestIt
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-black/35">
+                          SoundQ
                         </p>
                         <p className="mt-1 truncate text-lg font-semibold sm:text-xl">
                           {t.explainTitle}

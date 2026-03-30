@@ -2,8 +2,13 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "RequestIt",
+  title: "SoundQ",
   description: "Live song requests pre DJ-ov a eventy",
+  icons: {
+      icon: "/logo.png",
+      apple: "/logo.png",
+      shortcut: "/logo.png",
+    },
 };
 
 export default function RootLayout({
