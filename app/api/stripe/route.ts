@@ -19,8 +19,6 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    console.log("STRIPE KEY PREFIX:", process.env.STRIPE_SECRET_KEY?.slice(0, 7));
-    console.log("APP URL:", process.env.NEXT_PUBLIC_APP_URL);
     event = stripe.webhooks.constructEvent(
       body,
       signature,

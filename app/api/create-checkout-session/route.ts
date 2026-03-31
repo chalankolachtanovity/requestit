@@ -111,14 +111,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const appUrl = "https://soundq.me";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
     const songLabel = hasCustomSong
       ? `${customTrackName!.trim()} — ${customArtistName!.trim()}`
       : "Priority song request";
-
-    console.log("STRIPE KEY PREFIX:", process.env.STRIPE_SECRET_KEY?.slice(0, 7));
-    console.log("HARDCODED APP URL:", appUrl);
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
