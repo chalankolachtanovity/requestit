@@ -49,40 +49,67 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f7f7f5] px-4 py-10 text-[#121212]">
-      {/* gradient */}
+    <main className="relative min-h-screen overflow-hidden bg-[#f7f7f5] px-4 py-8 text-[#121212] sm:py-10">
+      {/* ambient background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full blur-3xl opacity-80"
-          style={{ background: "linear-gradient(135deg, rgba(87,232,255,0.25), rgba(168,85,247,0.2))" }}
+        <div
+          className="absolute -left-20 top-6 h-72 w-72 rounded-full blur-3xl opacity-80"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(87,232,255,0.25), rgba(168,85,247,0.20))",
+          }}
         />
-        <div className="absolute right-0 top-0 h-80 w-80 rounded-full blur-3xl opacity-70"
-          style={{ background: "linear-gradient(135deg, rgba(244,114,182,0.2), rgba(253,224,71,0.2))" }}
+        <div
+          className="absolute -right-8 top-0 h-80 w-80 rounded-full blur-3xl opacity-70"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(244,114,182,0.18), rgba(253,224,71,0.20))",
+          }}
         />
       </div>
 
-      <div className="relative z-10 flex min-h-[80vh] flex-col items-center justify-center">
+      <div className="relative z-10 flex min-h-[85vh] flex-col items-center justify-center">
+        {/* brand */}
+        <div className="mb-6 flex items-center gap-3 sm:mb-8">
 
-        {/* LOGO */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
-            <Image src="/logo.png" alt="RequestIt logo" fill className="object-cover" />
-          </div>
-          <span className="text-lg font-semibold">RequestIt</span>
+
+          <Image
+            src="/logo_text.png"
+            alt="SoundQ"
+            width={220}
+            height={64}
+            className="h-6 w-auto sm:h-18"
+            priority
+          />
         </div>
 
-        <div className="w-full max-w-md rounded-[2rem] border border-black/10 bg-white/70 p-8 shadow-[0_30px_80px_rgba(0,0,0,0.08)] backdrop-blur-xl">
-          <h1 className="text-3xl font-bold">Sign up</h1>
-          <p className="mt-2 text-sm text-black/50">
-            Vytvor si účet a začni svoj prvý DJ event
+        {/* card */}
+        <div className="w-full max-w-md rounded-[1.75rem] border border-black/10 bg-white/75 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:p-8">
+          <div className="inline-flex items-center rounded-full border border-black/10 bg-white/80 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-black/45">
+            Create account
+          </div>
+
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Sign up
+          </h1>
+
+          <p className="mt-2 text-sm text-black/55">
+            Vytvor si účet a spusti svoj prvý DJ event.
           </p>
 
-          <div className="mt-6 space-y-4">
+          <form
+            className="mt-6 space-y-3.5"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await handleSignup();
+            }}
+          >
             <input
               type="text"
               placeholder="DJ name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white/80 px-4 py-3 outline-none focus:border-black/30"
+              className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
             />
 
             <input
@@ -90,7 +117,7 @@ export default function SignupPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white/80 px-4 py-3 outline-none focus:border-black/30"
+              className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
             />
 
             <input
@@ -98,31 +125,30 @@ export default function SignupPage() {
               placeholder="Heslo"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white/80 px-4 py-3 outline-none focus:border-black/30"
+              className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
             />
 
             <button
-              onClick={handleSignup}
+              type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#111111] px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="mt-1 inline-flex w-full items-center justify-center rounded-xl bg-[#111111] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Vytváram účet..." : "Vytvoriť účet"}
             </button>
 
-            {message && (
-              <p className="text-sm text-red-500">{message}</p>
-            )}
+            {message && <p className="text-sm text-red-500">{message}</p>}
 
-            <p className="pt-2 text-center text-sm text-black/50">
+            <p className="pt-1 text-center text-sm text-black/55">
               Už máš účet?{" "}
-              <span
+              <button
+                type="button"
                 onClick={() => router.push("/login")}
-                className="cursor-pointer font-medium text-black hover:underline"
+                className="font-medium text-black underline-offset-2 hover:underline"
               >
                 Prihlásiť sa
-              </span>
+              </button>
             </p>
-          </div>
+          </form>
         </div>
       </div>
     </main>

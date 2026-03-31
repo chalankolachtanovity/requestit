@@ -340,7 +340,7 @@ export default function SearchBar({
           )}
 
           <p className="mt-3 text-xs text-white/40">
-            Vyššia suma môže tvoju pesničku posunúť dopredu.
+            Vyššia suma zaručí vyššie poradie pesničky.
           </p>
         </div>
       </section>

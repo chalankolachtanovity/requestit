@@ -69,6 +69,10 @@ export default function DashboardTopRight({
           🎧
         </div>
 
+        <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+          ACCOUNT
+        </p>
+
         {showCredits ? (
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">

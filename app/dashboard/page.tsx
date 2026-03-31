@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import SessionsList from "@/components/admin/SessionsList";
@@ -19,11 +20,18 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
+              <Image
+                src="/black/logo_black.png"
+                alt="Requestit"
+                width={150}
+                height={36}
+                priority
+                className="h-16 w-auto"
+              />
             <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-              DJ Dashboard
+              
             </p>
-            <h1 className="mt-2 text-3xl font-bold">Sessions</h1>
-            <p className="mt-2 text-white/55">{user.email}</p>
+            <h1 className="mt-2 text-3xl font-bold">Events</h1>
           </div>
 
           <DashboardTopRight />

@@ -57,8 +57,7 @@ export default async function DjPage({ params }: PageProps) {
           </h1>
 
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/55 md:text-base">
-            Vyber pesničku, pošli request a dostaň ju do poradia. Priority request
-            ťa vie posunúť vyššie.
+            Vyber pesničku a dostaň ju do poradia. Priority request ťa posunie vyššie v poradí.
           </p>
         </div>
 
