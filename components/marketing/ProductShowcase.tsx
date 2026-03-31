@@ -95,7 +95,7 @@ function PhonePreview({
           <div className="h-1.5 w-20 rounded-full bg-white/10" />
         </div>
 
-        <div className="min-h-[540px]">
+        <div className="min-h-[480px]">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
@@ -264,28 +264,16 @@ export default function ProductShowcase({
     }
   };
 
-  const lidRotate = 10 - reveal * 10;
-  const translateY = 18 - reveal * 18;
-  const screenOpacity = 0.9 + reveal * 0.1;
 
   return (
-    <div className="w-full max-w-[1320px]">
-      <p className="mb-6 text-center text-sm text-white/70">{t.helper}</p>
+    <div className="w-full max-w-[1100px]">
+      <p className="mb-4 text-center text-xs text-white/45">{t.helper}</p>
 
-      <div className="grid items-start gap-8 xl:grid-cols-[1fr_300px]">
+      <div className="grid items-start gap-5 xl:grid-cols-[1fr_290px]">
         <div className="relative">
-          <div
-            className="mx-auto w-full rounded-t-[2rem] border border-white/10 bg-[#d8d8de] p-3 shadow-[0_35px_90px_rgba(0,0,0,0.28)] transition-transform duration-700 ease-out"
-            style={{
-              transform: `perspective(1800px) rotateX(${lidRotate}deg) translateY(${translateY}px)`,
-              transformOrigin: "bottom center",
-            }}
-          >
+          <div className="mx-auto w-full rounded-t-[2rem] border border-white/10 bg-[#d8d8de] p-3 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
             <div className="rounded-[1.6rem] border border-black/10 bg-[#0f0f12] p-3">
-              <div
-                className="min-h-[560px] rounded-[1.1rem] bg-[#181818] p-5 text-white transition-all duration-700 ease-out"
-                style={{ opacity: screenOpacity }}
-              >
+              <div className="min-h-[520px] rounded-[1.1rem] bg-[#181818] p-5 text-white">
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.16em] text-white/35">
@@ -389,51 +377,51 @@ export default function ProductShowcase({
                       <div className="space-y-3">
                         {incoming.map((item) => (
                           <div
-                            key={item.id}
-                            className={`rounded-2xl border p-4 transition-all duration-300 ${
-                              item.type === "paid"
-                                ? "border-green-400/20 bg-green-400/[0.07]"
-                                : "border-white/10 bg-white/[0.03]"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Cover src={item.cover} alt={item.title} />
+  key={item.id}
+  className={`rounded-2xl border px-3 py-3 transition-all duration-300 ${
+    item.type === "paid"
+      ? "border-green-400/20 bg-green-400/[0.07]"
+      : "border-white/10 bg-white/[0.03]"
+  }`}
+>
+  <div className="flex items-center gap-3">
+    <Cover src={item.cover} alt={item.title} size="sm" />
 
-                              <div className="min-w-0 flex-1">
-                                <div className="mb-1 flex items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                                      item.type === "paid"
-                                        ? "bg-green-400 text-black"
-                                        : "border border-white/10 text-white/60"
-                                    }`}
-                                  >
-                                    {item.type === "paid" ? t.paid : t.free}
-                                  </span>
+    <div className="min-w-0 flex-1">
+      <div className="mb-1 flex items-center gap-2">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            item.type === "paid"
+              ? "bg-green-400 text-black"
+              : "border border-white/10 text-white/60"
+          }`}
+        >
+          {item.type === "paid" ? t.paid : t.free}
+        </span>
 
-                                  {item.amount ? (
-                                    <span className="text-xs font-semibold text-green-300">
-                                      {item.amount}
-                                    </span>
-                                  ) : null}
-                                </div>
+        {item.amount ? (
+          <span className="text-[11px] font-semibold text-green-300">
+            {item.amount}
+          </span>
+        ) : null}
+      </div>
 
-                                <p className="truncate text-sm font-semibold">{item.title}</p>
-                                <p className="truncate text-xs text-white/50">{item.artist}</p>
-                              </div>
-                            </div>
+      <p className="truncate text-sm font-semibold leading-tight">{item.title}</p>
+      <p className="truncate text-xs text-white/50">{item.artist}</p>
+    </div>
 
-                            <button
-                              onClick={() => acceptRequest(item)}
-                              className={`mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
-                                item.type === "paid"
-                                  ? "bg-white text-black hover:opacity-95"
-                                  : "border border-white/10 text-white hover:bg-white/[0.05]"
-                              }`}
-                            >
-                              {item.type === "paid" ? t.acceptCharge : t.accept}
-                            </button>
-                          </div>
+    <button
+      onClick={() => acceptRequest(item)}
+      className={`shrink-0 rounded-full px-3 py-2 text-xs font-medium transition-all duration-300 ${
+        item.type === "paid"
+          ? "bg-white text-black hover:opacity-95"
+          : "border border-white/10 text-white hover:bg-white/[0.05]"
+      }`}
+    >
+      {item.type === "paid" ? t.acceptCharge : t.accept}
+    </button>
+  </div>
+</div>
                         ))}
                       </div>
                     )}

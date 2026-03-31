@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const appUrl = "https://requestit-tez2y.ondigitalocean.app/";
+    const appUrl = "https://soundq.me/";
 
     const songLabel = hasCustomSong
       ? `${customTrackName!.trim()} — ${customArtistName!.trim()}`
