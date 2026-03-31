@@ -32,15 +32,11 @@ const content = {
     badge: "Pre DJ-ov a eventy",
     title: "Live song requesty pre DJ-ov.",
     description: "QR pre hostí. Jedna queue. Vyberaj si to, čo chceš hrať.",
-
-    // Song database
     songsLabel: "Databáza skladieb",
     songsTitle: "100 000+ skladieb pripravených na vyhľadávanie",
     songsDescription: "Rýchle vyhľadávanie skladieb pre live eventy.",
     songsBadge: "Vyhľadávanie v štýle Spotify",
     songsSearch: "Nájsť",
-
-    // Payments
     paymentsLabel: "Platby",
     paymentsTitle: "Rýchle a bezpečné platby",
     paymentsDescription: "Prijímaj requesty s okamžitou platbou.",
@@ -48,8 +44,6 @@ const content = {
     stripeSubtitle: "Zabezpečené cez Stripe",
     applePay: "Apple Pay",
     googlePay: "Google Pay",
-
-    // How it works
     howLabel: "Ako to funguje",
     howTitle: "Všetko len v 3 jednoduchých krokoch",
     howStep1Title: "Vytvor svoj event",
@@ -58,7 +52,6 @@ const content = {
     howStep2Text: "Naskenujú QR, vyhľadajú skladbu a pošlú request za pár sekúnd.",
     howStep3Title: "Ovládaj queue",
     howStep3Text: "Schvaľuj requesty, rieš priority a zarábaj.",
-    // ...
     footerRights: "Všetky práva vyhradené.",
     footerContact: "Kontakt",
   },
@@ -70,15 +63,11 @@ const content = {
     badge: "For DJs and events",
     title: "Live song requests for DJs.",
     description: "Guest QR. One queue. Full control.",
-
-    // Song database
     songsLabel: "Song database",
     songsTitle: "100,000+ songs ready to search",
     songsDescription: "Fast track search built for live events.",
     songsBadge: "Spotify-style search",
     songsSearch: "Search",
-
-    // Payments
     paymentsLabel: "Payments",
     paymentsTitle: "Fast and secure payments",
     paymentsDescription: "Accept song requests with instant checkout.",
@@ -86,8 +75,6 @@ const content = {
     stripeSubtitle: "Secured with Stripe",
     applePay: "Apple Pay",
     googlePay: "Google Pay",
-
-    // How it works
     howLabel: "How it works",
     howTitle: "Start in 3 simple steps",
     howStep1Title: "Create your event",
@@ -96,7 +83,6 @@ const content = {
     howStep2Text: "They scan, search, and request songs in seconds.",
     howStep3Title: "Control the queue",
     howStep3Text: "Accept requests, manage priority, and keep the flow going.",
-    // ...
     footerRights: "All rights reserved.",
     footerContact: "Contact",
   },
@@ -187,13 +173,13 @@ export default function HomePage() {
       <div className="relative z-10">
         <div className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6 sm:pb-6 sm:pt-6">
           <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {/* logo */}
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <div className="relative h-9 w-9 shrink-0 overflow-hidden sm:h-11 sm:w-11">
                 <Image
                   src="/logo.png"
                   alt="Sound Queue logo"
                   fill
+                  sizes="(max-width: 640px) 36px, 44px"
                   className="object-cover"
                   priority
                 />
@@ -204,12 +190,12 @@ export default function HomePage() {
                 alt="Sound Queue"
                 width={260}
                 height={84}
+                sizes="(max-width: 640px) 128px, (max-width: 768px) 180px, 260px"
                 className="h-8 w-auto sm:h-14 md:h-16"
                 priority
               />
             </div>
 
-            {/* actions */}
             <div className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
               <LanguageSwitch language={language} setLanguage={setLanguage} />
 
@@ -230,303 +216,288 @@ export default function HomePage() {
           </header>
         </div>
 
-<section className="px-4 pt-8 pb-10 sm:px-6 sm:pt-10 md:pt-12">
-  <div className="mx-auto max-w-7xl text-center">
-    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs text-black/60 shadow-sm backdrop-blur">
-      <span className="h-2 w-2 rounded-full bg-[#66e7ff]" />
-      <span>{t.badge}</span>
-    </div>
-
-    <h1 className="mx-auto max-w-3xl text-3xl font-semibold leading-[1.05] tracking-tight sm:text-4xl md:text-5xl">
-      {t.title}
-    </h1>
-
-    <p className="mx-auto mt-3 max-w-lg text-sm text-black/60 sm:text-base">
-      {t.description}
-    </p>
-
-    <div className="mt-6">
-      <Link
-        href="/signup"
-        className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#111111] px-7 py-3 text-sm font-medium text-white transition hover:opacity-90"
-      >
-        Get started
-      </Link>
-    </div>
-
-    <div className="mt-8 sm:mt-10">
-      <div className="mt-8 sm:mt-10 flex justify-center">
-        <ProductShowcase language={language} reveal={1} />
-      </div>
-    </div>
-  </div>
-</section>
-<section className="px-3 pb-12 pt-8 sm:px-6 sm:pb-24 sm:pt-14">
-  <div className="mx-auto max-w-7xl">
-    <div className="text-center">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-black/35 sm:text-[11px]">
-        {t.songsLabel}
-      </p>
-
-      <h2 className="mx-auto mt-2 max-w-3xl text-2xl font-semibold tracking-tight text-[#111111] sm:mt-3 sm:text-4xl md:text-5xl">
-        {t.songsTitle}
-      </h2>
-
-      <p className="mx-auto mt-3 max-w-xl text-xs leading-5 text-black/55 sm:mt-4 sm:text-base sm:leading-6">
-        {t.songsDescription}
-      </p>
-
-      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs text-black/65 shadow-sm backdrop-blur sm:mt-5 sm:px-4 sm:py-2 sm:text-sm">
-        <svg
-          viewBox="0 0 168 168"
-          className="h-4 w-4 sm:h-5 sm:w-5"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <circle cx="84" cy="84" r="84" fill="#1ED760" />
-          <path
-            d="M119.6 117.3a5.2 5.2 0 0 1-7.1 1.7c-19.4-11.8-43.8-14.5-72.3-8a5.2 5.2 0 0 1-2.3-10.2c31.2-7.1 58.4-4 80 9.1a5.2 5.2 0 0 1 1.7 7.4Z"
-            fill="#111111"
-          />
-          <path
-            d="M129.8 94.3a6.4 6.4 0 0 1-8.8 2.1c-22.2-13.6-56.1-17.5-82.4-9.6a6.4 6.4 0 1 1-3.7-12.3c30.3-9.1 68-4.6 92.8 10.6a6.4 6.4 0 0 1 2.1 9.2Z"
-            fill="#111111"
-          />
-          <path
-            d="M130.7 70.4c-26.5-15.8-70.2-17.3-95.5-9.6a7.7 7.7 0 1 1-4.4-14.8c29-8.7 77.2-7 107.8 11.2a7.7 7.7 0 1 1-7.9 13.2Z"
-            fill="#111111"
-          />
-        </svg>
-        <span>{t.songsBadge}</span>
-      </div>
-    </div>
-
-    <div className="relative mt-8 sm:mt-10">
-      {/* Top/Bottom fade (desktop vibe) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-24 bg-[linear-gradient(180deg,#f6f6f3,rgba(246,246,243,0))] sm:block" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden h-24 bg-[linear-gradient(0deg,#f6f6f3,rgba(246,246,243,0))] sm:block" />
-
-      {/* Mobile infinite-feel hint */}
-      <div className="mb-2 flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.14em] text-black/35 sm:hidden">
-        <span>potiahni</span>
-        <span className="text-xs">→</span>
-      </div>
-
-      {/* Mobile: horizontal rail */}
-      <div className="relative sm:hidden">
-        {/* Side fades to indicate continuation */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#f6f6f3] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#f6f6f3] to-transparent" />
-
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {songWall.map((song, index) => (
-            <div
-              key={`${song.title}-${index}`}
-              className="min-w-[84%] snap-start rounded-2xl border border-black/10 bg-white/85 p-2.5 shadow-sm backdrop-blur"
-            >
-              <div className="flex items-center gap-2">
-                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-black/5">
-                  <Image
-                    src={song.cover}
-                    alt={song.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-[#111111]">
-                    {song.title}
-                  </p>
-                  <p className="truncate text-[11px] text-black/50">
-                    {song.artist}
-                  </p>
-                </div>
-
-                <div className="rounded-full border border-black/10 px-2 py-0.5 text-[10px] text-black/45">
-                  {t.songsSearch}
-                </div>
-              </div>
+        <section className="px-4 pb-10 pt-8 sm:px-6 sm:pt-10 md:pt-12">
+          <div className="mx-auto max-w-7xl text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs text-black/60 shadow-sm backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-[#66e7ff]" />
+              <span>{t.badge}</span>
             </div>
-          ))}
 
-          {/* Ghost card => stronger "continues" cue */}
-          <div
-            aria-hidden="true"
-            className="min-w-[24%] snap-start rounded-2xl border border-dashed border-black/10 bg-white/40"
-          />
-        </div>
-      </div>
+            <h1 className="mx-auto max-w-3xl text-3xl font-semibold leading-[1.05] tracking-tight sm:text-4xl md:text-5xl">
+              {t.title}
+            </h1>
 
-      {/* Desktop/Tablet: grid */}
-      <div className="hidden grid-cols-2 gap-2 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
-        {songWall.map((song, index) => (
-          <div
-            key={`${song.title}-${index}`}
-            className={`group rounded-2xl border border-black/10 bg-white/75 p-2.5 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white sm:rounded-[1.5rem] sm:p-3 ${
-              index % 5 === 0 ? "lg:col-span-2" : ""
-            }`}
-          >
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-black/5 sm:h-16 sm:w-16 sm:rounded-xl">
-                <Image
-                  src={song.cover}
-                  alt={song.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+            <p className="mx-auto mt-3 max-w-lg text-sm text-black/60 sm:text-base">
+              {t.description}
+            </p>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-[#111111] sm:text-base">
-                  {song.title}
-                </p>
-                <p className="truncate text-[11px] text-black/50 sm:text-sm">
-                  {song.artist}
-                </p>
-              </div>
+            <div className="mt-6">
+              <Link
+                href="/signup"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#111111] px-7 py-3 text-sm font-medium text-white transition hover:opacity-90"
+              >
+                Get started
+              </Link>
+            </div>
 
-              <div className="rounded-full border border-black/10 px-2 py-0.5 text-[10px] text-black/45 sm:px-3 sm:py-1 sm:text-[11px]">
-                {t.songsSearch}
+            <div className="mt-8 sm:mt-10">
+              <div className="mt-8 flex justify-center sm:mt-10">
+                <ProductShowcase language={language} reveal={1} />
               </div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</section>
+        </section>
 
-<section className="px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14">
-  <div className="mx-auto max-w-5xl text-center">
-    <p className="text-[11px] uppercase tracking-[0.24em] text-black/35">
-      {t.paymentsLabel}
-    </p>
+        <section className="px-3 pb-12 pt-8 sm:px-6 sm:pb-24 sm:pt-14">
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-black/35 sm:text-[11px]">
+                {t.songsLabel}
+              </p>
 
-    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
-      {t.paymentsTitle}
-    </h2>
+              <h2 className="mx-auto mt-2 max-w-3xl text-2xl font-semibold tracking-tight text-[#111111] sm:mt-3 sm:text-4xl md:text-5xl">
+                {t.songsTitle}
+              </h2>
 
-    <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-black/55 sm:text-base">
-      {t.paymentsDescription}
-    </p>
+              <p className="mx-auto mt-3 max-w-xl text-xs leading-5 text-black/55 sm:mt-4 sm:text-base sm:leading-6">
+                {t.songsDescription}
+              </p>
 
-    <div className="mt-10 flex flex-wrap items-stretch justify-center gap-5">
-      <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-        <div className="flex flex-col items-center text-center">
-          <img
-            src="/payments/stripe.png"
-            alt="Stripe"
-            className="mb-5 h-12 w-auto object-contain"
-          />
-          <p className="text-base font-semibold text-[#111111]">{t.stripeTitle}</p>
-          <p className="mt-1 text-sm text-black/50">{t.stripeSubtitle}</p>
-        </div>
-      </div>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs text-black/65 shadow-sm backdrop-blur sm:mt-5 sm:px-4 sm:py-2 sm:text-sm">
+                <svg
+                  viewBox="0 0 168 168"
+                  className="h-4 w-4 sm:h-5 sm:w-5"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="84" cy="84" r="84" fill="#1ED760" />
+                  <path
+                    d="M119.6 117.3a5.2 5.2 0 0 1-7.1 1.7c-19.4-11.8-43.8-14.5-72.3-8a5.2 5.2 0 0 1-2.3-10.2c31.2-7.1 58.4-4 80 9.1a5.2 5.2 0 0 1 1.7 7.4Z"
+                    fill="#111111"
+                  />
+                  <path
+                    d="M129.8 94.3a6.4 6.4 0 0 1-8.8 2.1c-22.2-13.6-56.1-17.5-82.4-9.6a6.4 6.4 0 1 1-3.7-12.3c30.3-9.1 68-4.6 92.8 10.6a6.4 6.4 0 0 1 2.1 9.2Z"
+                    fill="#111111"
+                  />
+                  <path
+                    d="M130.7 70.4c-26.5-15.8-70.2-17.3-95.5-9.6a7.7 7.7 0 1 1-4.4-14.8c29-8.7 77.2-7 107.8 11.2a7.7 7.7 0 1 1-7.9 13.2Z"
+                    fill="#111111"
+                  />
+                </svg>
+                <span>{t.songsBadge}</span>
+              </div>
+            </div>
 
-      <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-        <div className="flex flex-col items-center text-center">
-          <img
-            src="/payments/apple.jpg"
-            alt="Apple Pay"
-            className="mb-5 h-12 w-auto object-contain"
-          />
-          <p className="text-base font-semibold text-[#111111]">{t.applePay}</p>
-        </div>
-      </div>
+            <div className="relative mt-8 sm:mt-10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-24 bg-[linear-gradient(180deg,#f6f6f3,rgba(246,246,243,0))] sm:block" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden h-24 bg-[linear-gradient(0deg,#f6f6f3,rgba(246,246,243,0))] sm:block" />
 
-      <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-        <div className="flex flex-col items-center text-center">
-          <img
-            src="/payments/google.png"
-            alt="Google Pay"
-            className="mb-5 h-12 w-auto object-contain"
-          />
-          <p className="text-base font-semibold text-[#111111]">{t.googlePay}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+              <div className="mb-2 flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.14em] text-black/35 sm:hidden">
+                <span>potiahni</span>
+                <span className="text-xs">→</span>
+              </div>
 
-<section className="px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14">
-  <div className="mx-auto max-w-6xl text-center">
-    <p className="text-[11px] uppercase tracking-[0.24em] text-black/35">
-      {t.howLabel}
-    </p>
+              <div className="relative sm:hidden">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#f6f6f3] to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#f6f6f3] to-transparent" />
 
-    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
-      {t.howTitle}
-    </h2>
+                <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {songWall.map((song, index) => (
+                    <div
+                      key={`${song.title}-${index}`}
+                      className="min-w-[84%] snap-start rounded-2xl border border-black/10 bg-white/85 p-2.5 shadow-sm backdrop-blur"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-black/5">
+                          <Image
+                            src={song.cover}
+                            alt={song.title}
+                            fill
+                            sizes="44px"
+                            className="object-cover"
+                          />
+                        </div>
 
-    <div className="mt-10 grid gap-4 md:grid-cols-3">
-      <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
-          1
-        </div>
-        <p className="text-lg font-semibold text-[#111111]">{t.howStep1Title}</p>
-        <p className="mt-2 text-sm leading-6 text-black/55">
-          {t.howStep1Text}
-        </p>
-      </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-[#111111]">
+                            {song.title}
+                          </p>
+                          <p className="truncate text-[11px] text-black/50">
+                            {song.artist}
+                          </p>
+                        </div>
 
-      <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
-          2
-        </div>
-        <p className="text-lg font-semibold text-[#111111]">{t.howStep2Title}</p>
-        <p className="mt-2 text-sm leading-6 text-black/55">
-          {t.howStep2Text}
-        </p>
-      </div>
+                        <div className="rounded-full border border-black/10 px-2 py-0.5 text-[10px] text-black/45">
+                          {t.songsSearch}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
 
-      <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
-          3
-        </div>
-        <p className="text-lg font-semibold text-[#111111]">{t.howStep3Title}</p>
-        <p className="mt-2 text-sm leading-6 text-black/55">
-          {t.howStep3Text}
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
+                  <div
+                    aria-hidden="true"
+                    className="min-w-[24%] snap-start rounded-2xl border border-dashed border-black/10 bg-white/40"
+                  />
+                </div>
+              </div>
 
-<footer className="px-4 pb-10 pt-12 sm:px-6">
-  <div className="mx-auto max-w-6xl border-t border-black/10 pt-6">
-    
-    <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
-      
-      {/* left */}
-      <p className="text-sm text-black/50">
-        © {new Date().getFullYear()} soundq. {t.footerRights}
-      </p>
+              <div className="hidden grid-cols-2 gap-2 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+                {songWall.map((song, index) => (
+                  <div
+                    key={`${song.title}-${index}`}
+                    className={`group rounded-2xl border border-black/10 bg-white/75 p-2.5 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white sm:rounded-[1.5rem] sm:p-3 ${
+                      index % 5 === 0 ? "lg:col-span-2" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-black/5 sm:h-16 sm:w-16 sm:rounded-xl">
+                        <Image
+                          src={song.cover}
+                          alt={song.title}
+                          fill
+                          sizes="(max-width: 640px) 44px, 64px"
+                          className="object-cover"
+                        />
+                      </div>
 
-      {/* right */}
-      <div className="flex items-center gap-5 text-sm text-black/60">
-        <a
-          href="objednajsa7@gmail.com"
-          className="transition hover:text-black"
-        >
-          {t.footerContact}
-        </a>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-[#111111] sm:text-base">
+                          {song.title}
+                        </p>
+                        <p className="truncate text-[11px] text-black/50 sm:text-sm">
+                          {song.artist}
+                        </p>
+                      </div>
 
-        <a
-          href="https://instagram.com/soundq"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition hover:text-black"
-        >
-          Instagram
-        </a>
-      </div>
+                      <div className="rounded-full border border-black/10 px-2 py-0.5 text-[10px] text-black/45 sm:px-3 sm:py-1 sm:text-[11px]">
+                        {t.songsSearch}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
-    </div>
-  </div>
-</footer>
+        <section className="px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14">
+          <div className="mx-auto max-w-5xl text-center">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-black/35">
+              {t.paymentsLabel}
+            </p>
 
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              {t.paymentsTitle}
+            </h2>
+
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-black/55 sm:text-base">
+              {t.paymentsDescription}
+            </p>
+
+            <div className="mt-10 flex flex-wrap items-stretch justify-center gap-5">
+              <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="flex flex-col items-center text-center">
+                  <img
+                    src="/payments/stripe.png"
+                    alt="Stripe"
+                    className="mb-5 h-12 w-auto object-contain"
+                  />
+                  <p className="text-base font-semibold text-[#111111]">{t.stripeTitle}</p>
+                  <p className="mt-1 text-sm text-black/50">{t.stripeSubtitle}</p>
+                </div>
+              </div>
+
+              <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="flex flex-col items-center text-center">
+                  <img
+                    src="/payments/apple.jpg"
+                    alt="Apple Pay"
+                    className="mb-5 h-12 w-auto object-contain"
+                  />
+                  <p className="text-base font-semibold text-[#111111]">{t.applePay}</p>
+                </div>
+              </div>
+
+              <div className="w-full max-w-[260px] rounded-[28px] border border-black/10 bg-white/90 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="flex flex-col items-center text-center">
+                  <img
+                    src="/payments/google.png"
+                    alt="Google Pay"
+                    className="mb-5 h-12 w-auto object-contain"
+                  />
+                  <p className="text-base font-semibold text-[#111111]">{t.googlePay}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14">
+          <div className="mx-auto max-w-6xl text-center">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-black/35">
+              {t.howLabel}
+            </p>
+
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              {t.howTitle}
+            </h2>
+
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
+                  1
+                </div>
+                <p className="text-lg font-semibold text-[#111111]">{t.howStep1Title}</p>
+                <p className="mt-2 text-sm leading-6 text-black/55">{t.howStep1Text}</p>
+              </div>
+
+              <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
+                  2
+                </div>
+                <p className="text-lg font-semibold text-[#111111]">{t.howStep2Title}</p>
+                <p className="mt-2 text-sm leading-6 text-black/55">{t.howStep2Text}</p>
+              </div>
+
+              <div className="rounded-[28px] border border-black/10 bg-white/90 p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.05)] backdrop-blur">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#111111] text-sm font-semibold text-white">
+                  3
+                </div>
+                <p className="text-lg font-semibold text-[#111111]">{t.howStep3Title}</p>
+                <p className="mt-2 text-sm leading-6 text-black/55">{t.howStep3Text}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="px-4 pb-10 pt-12 sm:px-6">
+          <div className="mx-auto max-w-6xl border-t border-black/10 pt-6">
+            <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
+              <p className="text-sm text-black/50">
+                © {new Date().getFullYear()} soundq. {t.footerRights}
+              </p>
+
+              <div className="flex items-center gap-5 text-sm text-black/60">
+                <a
+                  href="objednajsa7@gmail.com"
+                  className="transition hover:text-black"
+                >
+                  {t.footerContact}
+                </a>
+
+                <a
+                  href="https://instagram.com/soundq"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition hover:text-black"
+                >
+                  Instagram
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </main>
   );

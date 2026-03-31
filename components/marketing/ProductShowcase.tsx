@@ -57,9 +57,11 @@ const copy = {
 
 function Cover({ src, alt, size = "md" }: { src: string; alt: string; size?: "sm" | "md" }) {
   const cls = size === "sm" ? "h-10 w-10" : "h-11 w-11";
+  const pixelSize = size === "sm" ? "40px" : "44px";
+
   return (
     <div className={`relative ${cls} overflow-hidden rounded-lg bg-white/10`}>
-      <Image src={src} alt={alt} fill className="object-cover" />
+      <Image src={src} alt={alt} fill sizes={pixelSize} className="object-cover" />
     </div>
   );
 }
@@ -104,7 +106,7 @@ function PhonePreview({
               <p className="mt-1 text-sm font-semibold">{t.guestSub}</p>
             </div>
 
-            <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
           </div>
 
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/60">
@@ -264,7 +266,6 @@ export default function ProductShowcase({
     }
   };
 
-
   return (
     <div className="w-full max-w-[1100px]">
       <p className="mb-4 text-center text-xs text-white/45">{t.helper}</p>
@@ -377,51 +378,51 @@ export default function ProductShowcase({
                       <div className="space-y-3">
                         {incoming.map((item) => (
                           <div
-  key={item.id}
-  className={`rounded-2xl border px-3 py-3 transition-all duration-300 ${
-    item.type === "paid"
-      ? "border-green-400/20 bg-green-400/[0.07]"
-      : "border-white/10 bg-white/[0.03]"
-  }`}
->
-  <div className="flex items-center gap-3">
-    <Cover src={item.cover} alt={item.title} size="sm" />
+                            key={item.id}
+                            className={`rounded-2xl border px-3 py-3 transition-all duration-300 ${
+                              item.type === "paid"
+                                ? "border-green-400/20 bg-green-400/[0.07]"
+                                : "border-white/10 bg-white/[0.03]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Cover src={item.cover} alt={item.title} size="sm" />
 
-    <div className="min-w-0 flex-1">
-      <div className="mb-1 flex items-center gap-2">
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            item.type === "paid"
-              ? "bg-green-400 text-black"
-              : "border border-white/10 text-white/60"
-          }`}
-        >
-          {item.type === "paid" ? t.paid : t.free}
-        </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-1 flex items-center gap-2">
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                      item.type === "paid"
+                                        ? "bg-green-400 text-black"
+                                        : "border border-white/10 text-white/60"
+                                    }`}
+                                  >
+                                    {item.type === "paid" ? t.paid : t.free}
+                                  </span>
 
-        {item.amount ? (
-          <span className="text-[11px] font-semibold text-green-300">
-            {item.amount}
-          </span>
-        ) : null}
-      </div>
+                                  {item.amount ? (
+                                    <span className="text-[11px] font-semibold text-green-300">
+                                      {item.amount}
+                                    </span>
+                                  ) : null}
+                                </div>
 
-      <p className="truncate text-sm font-semibold leading-tight">{item.title}</p>
-      <p className="truncate text-xs text-white/50">{item.artist}</p>
-    </div>
+                                <p className="truncate text-sm font-semibold leading-tight">{item.title}</p>
+                                <p className="truncate text-xs text-white/50">{item.artist}</p>
+                              </div>
 
-    <button
-      onClick={() => acceptRequest(item)}
-      className={`shrink-0 rounded-full px-3 py-2 text-xs font-medium transition-all duration-300 ${
-        item.type === "paid"
-          ? "bg-white text-black hover:opacity-95"
-          : "border border-white/10 text-white hover:bg-white/[0.05]"
-      }`}
-    >
-      {item.type === "paid" ? t.acceptCharge : t.accept}
-    </button>
-  </div>
-</div>
+                              <button
+                                onClick={() => acceptRequest(item)}
+                                className={`shrink-0 rounded-full px-3 py-2 text-xs font-medium transition-all duration-300 ${
+                                  item.type === "paid"
+                                    ? "bg-white text-black hover:opacity-95"
+                                    : "border border-white/10 text-white hover:bg-white/[0.05]"
+                                }`}
+                              >
+                                {item.type === "paid" ? t.acceptCharge : t.accept}
+                              </button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
