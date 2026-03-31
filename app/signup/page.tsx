@@ -4,10 +4,13 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 export default function SignupPage() {
   const supabase = getSupabaseBrowserClient();
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,14 +76,16 @@ export default function SignupPage() {
         <div className="mb-6 flex items-center gap-3 sm:mb-8">
 
 
-          <Image
-            src="/logo_text.png"
-            alt="SoundQ"
-            width={220}
-            height={64}
-            className="h-6 w-auto sm:h-18"
-            priority
-          />
+          <Link href="/">
+            <Image
+              src="/logo_text.png"
+              alt="SoundQ"
+              width={220}
+              height={64}
+              className="h-8 w-auto sm:h-18 cursor-pointer"
+              priority
+            />
+          </Link>
         </div>
 
         {/* card */}
@@ -120,13 +125,27 @@ export default function SignupPage() {
               className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
             />
 
-            <input
-              type="password"
-              placeholder="Heslo"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Heslo"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-black/10 bg-white/90 px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-black/35 focus:border-black/25 focus:ring-2 focus:ring-black/5"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black"
+              >
+                {showPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
+              </button>
+            </div>
 
             <button
               type="submit"

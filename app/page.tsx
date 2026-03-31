@@ -480,14 +480,14 @@ export default function HomePage() {
 
               <div className="flex items-center gap-5 text-sm text-black/60">
                 <a
-                  href="objednajsa7@gmail.com"
+                  href="mailto:samuelzatko07@gmail.com"
                   className="transition hover:text-black"
                 >
                   {t.footerContact}
                 </a>
 
                 <a
-                  href="https://instagram.com/soundq"
+                  href="https://instagram.com/sound.queue/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="transition hover:text-black"
