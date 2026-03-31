@@ -1,23 +1,17 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+
   const paymentAttemptId = searchParams.get("paymentAttemptId");
-  const returnTo = searchParams.get("returnTo");
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Potvrdzujem tvoj priority request...");
-
-  const backHref = useMemo(() => {
-    if (returnTo && returnTo.startsWith("/")) {
-      return returnTo;
-    }
-
-    return "/";
-  }, [returnTo]);
+  const [slug, setSlug] = useState<string | null>(null);
 
   useEffect(() => {
     const confirmPriorityRequest = async () => {
@@ -46,7 +40,19 @@ function PaymentSuccessContent() {
           return;
         }
 
-        setMessage("Tvoj priority request bol úspešne odoslaný DJ-ovi.");
+        setMessage(
+          "Tvoj priority request bol úspešne odoslaný DJ-ovi. Presmerovanie za pár sekúnd..."
+        );
+
+        if (result.slug) {
+          setSlug(result.slug);
+
+          setTimeout(() => {
+            router.replace(`/${result.slug}`);
+          }, 3000); // ⏳ 3 sekundy
+        } else {
+          router.replace("/");
+        }
       } catch (error) {
         console.error("PAYMENT SUCCESS PAGE ERROR:", error);
         setMessage("Nastala chyba pri potvrdzovaní requestu.");
@@ -56,7 +62,15 @@ function PaymentSuccessContent() {
     };
 
     confirmPriorityRequest();
-  }, [paymentAttemptId]);
+  }, [paymentAttemptId, router]);
+
+  const handleBack = () => {
+    if (slug) {
+      router.replace(`/${slug}`);
+    } else {
+      router.replace("/");
+    }
+  };
 
   return (
     <main className="min-h-screen bg-black px-6 py-10 text-white">
@@ -65,16 +79,18 @@ function PaymentSuccessContent() {
 
         <p className="mt-4 text-white/70">{message}</p>
 
-        {loading ? (
+        {loading && (
           <p className="mt-2 text-sm text-white/50">Spracovávam...</p>
-        ) : null}
+        )}
 
-        <a
-          href={backHref}
-          className="mt-6 inline-block rounded-full bg-white px-4 py-2 text-black"
-        >
-          Späť na requesty
-        </a>
+        {!loading && (
+          <button
+            onClick={handleBack}
+            className="mt-6 inline-block rounded-full bg-white px-4 py-2 text-black"
+          >
+            Späť na requesty
+          </button>
+        )}
       </div>
     </main>
   );

@@ -111,13 +111,13 @@ export default function SearchBar({
   sessionId,
   minPriorityAmountCents,
 }: SearchBarProps) {
-  const supabase = getSupabaseBrowserClient();
-
+  const [supabase] = useState(() => getSupabaseBrowserClient());
   const [query, setQuery] = useState("");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [liveLoading, setLiveLoading] = useState(true);
+  const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [upNext, setUpNext] = useState<LivePreviewItem[]>([]);
   const [currentTopAmountCents, setCurrentTopAmountCents] = useState<number | null>(null);
 
@@ -155,13 +155,21 @@ export default function SearchBar({
     }
   };
 
-  const fetchLivePreview = async () => {
+  const fetchLivePreview = async (silent = false) => {
     try {
-      setLiveLoading(true);
+      if (silent) {
+        setLiveRefreshing(true);
+      } else {
+        setLiveLoading(true);
+      }
 
       const response = await fetch(
-        `/api/live-preview?sessionId=${encodeURIComponent(sessionId)}`
+        `/api/live-preview?sessionId=${encodeURIComponent(sessionId)}`,
+        {
+          cache: "no-store",
+        }
       );
+
       const result: LivePreviewResponse | { error: string } =
         await response.json();
 
@@ -175,11 +183,12 @@ export default function SearchBar({
       console.error("Live preview fetch failed:", error);
     } finally {
       setLiveLoading(false);
+      setLiveRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchLivePreview();
+    fetchLivePreview(false);
 
     const requestsChannel = supabase
       .channel(`guest-requests-session-${sessionId}`)
@@ -192,7 +201,7 @@ export default function SearchBar({
           filter: `session_id=eq.${sessionId}`,
         } as never,
         () => {
-          fetchLivePreview();
+          fetchLivePreview(true);
         }
       )
       .subscribe();
@@ -208,7 +217,7 @@ export default function SearchBar({
           filter: `session_id=eq.${sessionId}`,
         } as never,
         () => {
-          fetchLivePreview();
+          fetchLivePreview(true);
         }
       )
       .subscribe();
@@ -287,7 +296,7 @@ export default function SearchBar({
         </div>
 
         <div className="px-4 py-4 md:px-5">
-          {liveLoading ? (
+          {liveLoading && upNext.length === 0 ? (
             <p className="text-sm text-white/40">Načítavam queue...</p>
           ) : upNext.length === 0 ? (
             <p className="text-sm text-white/45">
@@ -339,9 +348,15 @@ export default function SearchBar({
             </div>
           )}
 
-          <p className="mt-3 text-xs text-white/40">
-            Vyššia suma zaručí vyššie poradie pesničky.
-          </p>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-white/40">
+              Vyššia suma zaručí vyššie poradie pesničky.
+            </p>
+
+            {liveRefreshing ? (
+              <p className="text-[11px] text-white/30">Obnovujem...</p>
+            ) : null}
+          </div>
         </div>
       </section>
 

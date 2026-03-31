@@ -1,37 +1,74 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function PaymentCancelContent() {
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const router = useRouter();
 
-  const backHref = useMemo(() => {
-    if (returnTo && returnTo.startsWith("/")) {
-      return returnTo;
-    }
+  const paymentAttemptId = searchParams.get("paymentAttemptId");
 
-    return "/";
-  }, [returnTo]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("Presmerovávam späť na requesty...");
+
+  useEffect(() => {
+    const loadSessionSlug = async () => {
+      try {
+        if (!paymentAttemptId) {
+          setMessage("Chýba paymentAttemptId v URL.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch("/api/payment-attempt-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentAttemptId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          setMessage(result.error || "Nepodarilo sa načítať session.");
+          setLoading(false);
+          return;
+        }
+
+        setMessage("Platba bola zrušená. Presmerovávam späť na requesty...");
+
+        if (result.slug) {
+          setTimeout(() => {
+            router.replace(`/${result.slug}`); // 🔥 TU ZMENA
+          }, 1200);
+        } else {
+          router.replace("/");
+        }
+      } catch (error) {
+        console.error("PAYMENT CANCEL PAGE ERROR:", error);
+        setMessage("Nastala chyba pri načítaní session.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSessionSlug();
+  }, [paymentAttemptId, router]);
 
   return (
     <main className="min-h-screen bg-black px-6 py-10 text-white">
       <div className="mx-auto max-w-md text-center">
         <h1 className="text-3xl font-bold">Platba zrušená</h1>
 
-        <p className="mt-4 text-white/70">Request nebol dokončený.</p>
+        <p className="mt-4 text-white/70">{message}</p>
 
-        <p className="mt-2 text-sm text-white/50">
-          Môžeš to skúsiť znova alebo vybrať inú pesničku.
-        </p>
-
-        <a
-          href={backHref}
-          className="mt-6 inline-block rounded-full border border-white/20 px-4 py-2 text-white hover:bg-white/10"
-        >
-          Späť na requesty
-        </a>
+        {loading && (
+          <p className="mt-2 text-sm text-white/50">Spracovávam...</p>
+        )}
       </div>
     </main>
   );

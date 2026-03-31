@@ -35,7 +35,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. skontroluj či už request existuje
+    // 2. načítaj session z databázy kvôli slug
+    const { data: dbSession, error: dbSessionError } = await supabase
+      .from("sessions")
+      .select("slug")
+      .eq("id", attempt.session_id)
+      .single();
+
+    console.log("DB SESSION:", dbSession);
+    console.log("DB SESSION ERROR:", dbSessionError);
+
+    if (dbSessionError || !dbSession) {
+      return NextResponse.json(
+        { error: "Session v databáze neexistuje." },
+        { status: 404 }
+      );
+    }
+
+    // 3. skontroluj či už request existuje
     const { data: existingRequest, error: existingRequestError } =
       await supabase
         .from("requests")
@@ -46,14 +63,22 @@ export async function POST(request: Request) {
     console.log("EXISTING REQUEST:", existingRequest);
     console.log("EXISTING REQUEST ERROR:", existingRequestError);
 
+    if (existingRequestError) {
+      return NextResponse.json(
+        { error: existingRequestError.message },
+        { status: 500 }
+      );
+    }
+
     if (existingRequest) {
       return NextResponse.json({
         success: true,
         alreadyExists: true,
+        slug: dbSession.slug,
       });
     }
 
-    // 3. MUSÍME mať checkout_session_id
+    // 4. MUSÍME mať checkout_session_id
     if (!attempt.checkout_session_id) {
       return NextResponse.json(
         { error: "Chýba checkout_session_id." },
@@ -61,17 +86,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. získať session zo Stripe
-    const session = await stripe.checkout.sessions.retrieve(
+    // 5. získať session zo Stripe
+    const stripeSession = await stripe.checkout.sessions.retrieve(
       attempt.checkout_session_id
     );
 
-    console.log("STRIPE SESSION:", session.id);
+    console.log("STRIPE SESSION:", stripeSession.id);
 
-    // 5. získať payment intent
+    // 6. získať payment intent
     const paymentIntentId =
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
+      typeof stripeSession.payment_intent === "string"
+        ? stripeSession.payment_intent
         : null;
 
     console.log("PAYMENT INTENT ID:", paymentIntentId);
@@ -83,7 +108,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. uložiť do payment_attempts
+    // 7. uložiť do payment_attempts
     const { error: updateAttemptError } = await supabase
       .from("payment_attempts")
       .update({
@@ -101,7 +126,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. vytvoriť paid request
+    // 8. vytvoriť paid request
     const { data: insertedRequest, error: insertRequestError } = await supabase
       .from("requests")
       .insert([
@@ -138,6 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       request: insertedRequest,
+      slug: dbSession.slug,
     });
   } catch (error) {
     console.error("CONFIRM PRIORITY REQUEST ERROR:", error);
