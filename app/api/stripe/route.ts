@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-
+  console.log(process.env.STRIPE_SECRET_KEY)
   const supabase = await createSupabaseRouteClient();
 
   try {
