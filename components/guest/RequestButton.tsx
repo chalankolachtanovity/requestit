@@ -11,6 +11,9 @@ type RequestButtonProps = {
   customMode?: boolean;
   initialCustomTrackName?: string;
   initialCustomArtistName?: string;
+  allowFreeRequests: boolean;
+  allowPaidRequests: boolean;
+  requestsPaused: boolean;
 };
 
 export default function RequestButton({
@@ -20,6 +23,9 @@ export default function RequestButton({
   customMode = false,
   initialCustomTrackName = "",
   initialCustomArtistName = "",
+  allowFreeRequests,
+  allowPaidRequests,
+  requestsPaused,
 }: RequestButtonProps) {
   const [loadingType, setLoadingType] = useState<RequestType | null>(null);
   const [message, setMessage] = useState("");
@@ -51,6 +57,10 @@ export default function RequestButton({
   };
 
   const handleFreeRequest = async () => {
+    if (!allowFreeRequests) {
+      throw new Error("Bezplatné requesty sú momentálne vypnuté.");
+    }
+
     validateCustomSong();
 
     const response = await fetch("/api/request", {
@@ -77,6 +87,10 @@ export default function RequestButton({
   };
 
   const handlePaidRequest = async () => {
+    if (!allowPaidRequests) {
+      throw new Error("Priority requesty sú momentálne vypnuté.");
+    }
+
     validateCustomSong();
 
     let amountCents = selectedAmountCents;
@@ -141,6 +155,8 @@ export default function RequestButton({
     }
   };
 
+  const noRequestsEnabled = requestsPaused || (!allowFreeRequests && !allowPaidRequests);
+
   return (
     <div className="flex w-full max-w-[320px] flex-col items-end gap-2">
       {customMode ? (
@@ -163,69 +179,81 @@ export default function RequestButton({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap justify-end gap-2">
-        <button
-          onClick={() => handleRequest("free")}
-          disabled={loadingType !== null}
-          className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.05] disabled:opacity-50"
-        >
-          {loadingType === "free" ? "Odosielam..." : "Request"}
-        </button>
-
-        <button
-          onClick={() => setShowPriorityBox((prev) => !prev)}
-          disabled={loadingType !== null}
-          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:opacity-95 disabled:opacity-50"
-        >
-          Priority
-        </button>
-      </div>
-
-      {showPriorityBox ? (
-        <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <p className="mb-3 text-xs text-white/55">
-            Minimum priority suma: {(minPriorityAmountCents / 100).toFixed(2)} €
-          </p>
-
-          <div className="mb-3 flex flex-wrap gap-2">
-            {presetAmounts.map((amount, index) => (
+      {noRequestsEnabled ? (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/50">
+          Requesty sú momentálne vypnuté.
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap justify-end gap-2">
+            {allowFreeRequests ? (
               <button
-                key={`${amount}-${index}`}
-                onClick={() => {
-                  setSelectedAmountCents(amount);
-                  setCustomAmountEuro("");
-                }}
-                className={`rounded-full px-3 py-2 text-sm transition ${
-                  selectedAmountCents === amount && !customAmountEuro
-                    ? "bg-white text-black"
-                    : "border border-white/15 text-white/80 hover:bg-white/[0.05]"
-                }`}
+                onClick={() => handleRequest("free")}
+                disabled={loadingType !== null}
+                className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.05] disabled:opacity-50"
               >
-                {(amount / 100).toFixed(2)} €
+                {loadingType === "free" ? "Odosielam..." : "Request"}
               </button>
-            ))}
+            ) : null}
+
+            {allowPaidRequests ? (
+              <button
+                onClick={() => setShowPriorityBox((prev) => !prev)}
+                disabled={loadingType !== null}
+                className="rounded-full bg-amber-200/10 backdrop-blur-md border border-amber-300/20 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-200/20 disabled:opacity-50"
+              >
+                Priority
+              </button>
+            ) : null}
           </div>
 
-          <input
-            type="text"
-            inputMode="decimal"
-            value={customAmountEuro}
-            onChange={(e) => setCustomAmountEuro(e.target.value)}
-            placeholder="Vlastná suma, napr. 7.50"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/30"
-          />
+          {showPriorityBox && allowPaidRequests ? (
+            <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              <p className="mb-3 text-xs text-white/55">
+                Minimum priority suma: {(minPriorityAmountCents / 100).toFixed(2)} €
+              </p>
 
-          <button
-            onClick={() => handleRequest("paid")}
-            disabled={loadingType !== null}
-            className="mt-3 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black disabled:opacity-50"
-          >
-            {loadingType === "paid"
-              ? "Presmerovanie..."
-              : "Pokračovať na platbu"}
-          </button>
-        </div>
-      ) : null}
+              <div className="mb-3 flex flex-wrap gap-2">
+                {presetAmounts.map((amount, index) => (
+                  <button
+                    key={`${amount}-${index}`}
+                    onClick={() => {
+                      setSelectedAmountCents(amount);
+                      setCustomAmountEuro("");
+                    }}
+                    className={`rounded-full px-3 py-2 text-sm transition ${
+                      selectedAmountCents === amount && !customAmountEuro
+                        ? "bg-white text-black"
+                        : "border border-white/15 text-white/80 hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    {(amount / 100).toFixed(2)} €
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                inputMode="decimal"
+                value={customAmountEuro}
+                onChange={(e) => setCustomAmountEuro(e.target.value)}
+                placeholder="Vlastná suma, napr. 7.50"
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/30"
+              />
+
+              <button
+                onClick={() => handleRequest("paid")}
+                disabled={loadingType !== null}
+                className="mt-3 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black disabled:opacity-50"
+              >
+                {loadingType === "paid"
+                  ? "Presmerovanie..."
+                  : "Pokračovať na platbu"}
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
 
       {message ? (
         <p className="max-w-[260px] text-right text-xs text-white/60">

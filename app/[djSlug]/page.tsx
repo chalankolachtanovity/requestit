@@ -61,12 +61,6 @@ export default async function DjPage({ params }: PageProps) {
           </p>
         </div>
 
-        {session.requests_paused ? (
-          <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200">
-            Requesty sú momentálne pozastavené DJ-om.
-          </div>
-        ) : null}
-
         <SearchBar
           sessionId={session.id}
           minPriorityAmountCents={session.min_priority_amount_cents}

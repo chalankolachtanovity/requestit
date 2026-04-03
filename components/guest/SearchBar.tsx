@@ -33,18 +33,18 @@ type LivePreviewResponse = {
   currentTopAmountCents: number | null;
 };
 
+type SearchResponse = {
+  tracks: Track[];
+  allowFreeRequests: boolean;
+  allowPaidRequests: boolean;
+  requestsPaused: boolean;
+};
+
 type SearchBarProps = {
   sessionId: string;
   minPriorityAmountCents: number;
 };
 
-function formatDuration(ms: number | null) {
-  if (!ms) return null;
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
 
 function NotesPlaceholder() {
   return (
@@ -60,6 +60,9 @@ function CustomSongPrompt({
   trimmedQuery,
   showCustomSongForm,
   setShowCustomSongForm,
+  allowFreeRequests,
+  allowPaidRequests,
+  requestsPaused,
   compact = false,
 }: {
   sessionId: string;
@@ -67,6 +70,9 @@ function CustomSongPrompt({
   trimmedQuery: string;
   showCustomSongForm: boolean;
   setShowCustomSongForm: (value: boolean) => void;
+  allowFreeRequests: boolean;
+  allowPaidRequests: boolean;
+  requestsPaused: boolean;
   compact?: boolean;
 }) {
   return (
@@ -99,13 +105,15 @@ function CustomSongPrompt({
             initialCustomTrackName={trimmedQuery}
             initialCustomArtistName=""
             customMode
+            allowFreeRequests={allowFreeRequests}
+            allowPaidRequests={allowPaidRequests}
+            requestsPaused={requestsPaused}
           />
         </div>
       )}
     </div>
   );
 }
-
 
 export default function SearchBar({
   sessionId,
@@ -121,9 +129,14 @@ export default function SearchBar({
   const [upNext, setUpNext] = useState<LivePreviewItem[]>([]);
   const [currentTopAmountCents, setCurrentTopAmountCents] = useState<number | null>(null);
 
-  const[hasSearched, setHasSearched] = useState(false);
+  const [requestsPaused, setRequestsPaused] = useState(false);
+
+  const [hasSearched, setHasSearched] = useState(false);
   const trimmedQuery = query.trim();
   const [showCustomSongForm, setShowCustomSongForm] = useState(false);
+
+  const [allowFreeRequests, setAllowFreeRequests] = useState(true);
+  const [allowPaidRequests, setAllowPaidRequests] = useState(true);
 
   const enrichTrackImage = async (trackId: string) => {
     try {
@@ -233,12 +246,13 @@ export default function SearchBar({
 
     setShowCustomSongForm(false);
     setHasSearched(false);
+
     if (!trimmedQuery) {
       setTracks([]);
       return;
     }
 
-    if (!trimmedQuery || trimmedQuery.length < 2) {
+    if (trimmedQuery.length < 2) {
       setTracks([]);
       return;
     }
@@ -248,17 +262,21 @@ export default function SearchBar({
         setLoading(true);
 
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(trimmedQuery)}`
+          `/api/search?q=${encodeURIComponent(trimmedQuery)}&sessionId=${encodeURIComponent(sessionId)}`
         );
-        const result = await response.json();
 
-        if (!response.ok) {
+        const result: SearchResponse | { error: string } = await response.json();
+
+        if (!response.ok || !("tracks" in result)) {
           setTracks([]);
           return;
         }
 
         const nextTracks: Track[] = result.tracks ?? [];
         setTracks(nextTracks);
+        setAllowFreeRequests(result.allowFreeRequests);
+        setAllowPaidRequests(result.allowPaidRequests);
+        setRequestsPaused(result.requestsPaused);
 
         nextTracks.forEach((track) => {
           if (!track.image_url && track.spotify_track_id) {
@@ -275,7 +293,7 @@ export default function SearchBar({
     }, 250);
 
     return () => clearTimeout(timeout);
-  }, [query]);
+  }, [query, sessionId]);
 
   return (
     <div className="space-y-6">
@@ -347,12 +365,13 @@ export default function SearchBar({
               ))}
             </div>
           )}
-
+          
           <div className="mt-3 flex items-center justify-between">
+            {/*
             <p className="text-xs text-white/40">
               Vyššia suma zaručí vyššie poradie pesničky.
             </p>
-
+            */}
             {liveRefreshing ? (
               <p className="text-[11px] text-white/30">Obnovujem...</p>
             ) : null}
@@ -416,6 +435,9 @@ export default function SearchBar({
                     initialCustomTrackName={trimmedQuery}
                     initialCustomArtistName=""
                     customMode
+                    allowFreeRequests={allowFreeRequests}
+                    allowPaidRequests={allowPaidRequests}
+                    requestsPaused={requestsPaused}
                   />
                 </div>
               )}
@@ -451,15 +473,6 @@ export default function SearchBar({
                             {track.artist}
                           </p>
 
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/35">
-                            {track.album_name ? (
-                              <span className="truncate">{track.album_name}</span>
-                            ) : null}
-
-                            {track.duration_ms ? (
-                              <span>{formatDuration(track.duration_ms)}</span>
-                            ) : null}
-                          </div>
 
                           {track.spotify_url ? (
                             <a
@@ -479,6 +492,9 @@ export default function SearchBar({
                           sessionId={sessionId}
                           trackId={track.id}
                           minPriorityAmountCents={minPriorityAmountCents}
+                          allowFreeRequests={allowFreeRequests}
+                          allowPaidRequests={allowPaidRequests}
+                          requestsPaused={requestsPaused}
                         />
                       </div>
                     </div>
@@ -487,34 +503,16 @@ export default function SearchBar({
               </div>
 
               {hasSearched ? (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-sm font-medium text-white">
-                    Nenašiel si svoju pesničku?
-                  </p>
-                  <p className="mt-1 text-sm text-white/45">
-                    Môžeš ju pridať manuálne ako vlastný request.
-                  </p>
-
-                  {!showCustomSongForm ? (
-                    <button
-                      onClick={() => setShowCustomSongForm(true)}
-                      className="mt-3 rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/[0.05]"
-                    >
-                      Pridať vlastnú pesničku
-                    </button>
-                  ) : (
-                    <div className="mt-4">
-                      <RequestButton
-                        sessionId={sessionId}
-                        trackId={null}
-                        minPriorityAmountCents={minPriorityAmountCents}
-                        initialCustomTrackName={trimmedQuery}
-                        initialCustomArtistName=""
-                        customMode
-                      />
-                    </div>
-                  )}
-                </div>
+                <CustomSongPrompt
+                  sessionId={sessionId}
+                  minPriorityAmountCents={minPriorityAmountCents}
+                  trimmedQuery={trimmedQuery}
+                  showCustomSongForm={showCustomSongForm}
+                  setShowCustomSongForm={setShowCustomSongForm}
+                  allowFreeRequests={allowFreeRequests}
+                  allowPaidRequests={allowPaidRequests}
+                  requestsPaused={requestsPaused}
+                />
               ) : null}
             </div>
           )}

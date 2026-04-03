@@ -15,16 +15,47 @@ type TrackRow = {
   dedupe_key: string | null;
 };
 
+type SessionRow = {
+  allow_free_requests: boolean;
+  allow_paid_requests: boolean;
+  requests_paused: boolean;
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim().toLowerCase();
+    const sessionId = searchParams.get("sessionId");
 
     if (!q || q.length < 2) {
-      return NextResponse.json({ tracks: [] });
+      return NextResponse.json({
+        tracks: [],
+        allowFreeRequests: true,
+        allowPaidRequests: true,
+        requestsPaused: false,
+      });
+    }
+
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: "Chýba sessionId." },
+        { status: 400 }
+      );
     }
 
     const supabase = await createSupabaseRouteClient();
+
+    const { data: sessionData, error: sessionError } = await supabase
+      .from("sessions")
+      .select("allow_free_requests, allow_paid_requests, requests_paused")
+      .eq("id", sessionId)
+      .single();
+
+    if (sessionError) {
+      return NextResponse.json({ error: sessionError.message }, { status: 500 });
+    }
+
+    const session = sessionData as SessionRow;
 
     const { data, error } = await supabase
       .from("tracks")
@@ -57,7 +88,12 @@ export async function GET(request: Request) {
       if (deduped.length >= 10) break;
     }
 
-    return NextResponse.json({ tracks: deduped });
+    return NextResponse.json({
+      tracks: deduped,
+      allowFreeRequests: session.allow_free_requests,
+      allowPaidRequests: session.allow_paid_requests,
+      requestsPaused: session.requests_paused,
+    });
   } catch (error) {
     console.error("SEARCH ROUTE ERROR:", error);
 
