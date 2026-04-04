@@ -816,7 +816,7 @@ export default function SearchBar({
         <div className="mt-4">
           {!trimmedSubmittedQuery ? (
             <p className="text-sm text-white/40">
-              Zadaj názov pesničky alebo interpreta a klikni na Search.
+              Zadaj názov pesničky/interpreta a hľadaj.
             </p>
           ) : loading ? (
             <p className="text-sm text-white/40">Vyhľadávam...</p>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { enrichTrackImageById } from "@/lib/tracks/enrich-track-image";
 
 type TrackRow = {
   id: string;
@@ -83,35 +84,6 @@ function setSpotifyCooldown(retryAfterSeconds: number) {
       : 10;
 
   spotifyCooldownUntil = Date.now() + safeSeconds * 1000;
-}
-
-async function enrichTrackOnServer(
-  request: Request,
-  trackId: string
-): Promise<EnrichResponse | null> {
-  try {
-    const enrichUrl = new URL("/api/tracks/enrich-image", request.url);
-
-    const response = await fetch(enrichUrl.toString(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: request.headers.get("cookie") ?? "",
-      },
-      body: JSON.stringify({ trackId }),
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const result = (await response.json()) as EnrichResponse;
-    return result;
-  } catch (error) {
-    console.error("SERVER ENRICH ERROR:", error);
-    return null;
-  }
 }
 
 async function getSpotifyAccessToken() {
@@ -387,9 +359,7 @@ export async function GET(request: Request) {
 
     if (missingCoverTracks.length > 0) {
       const enrichResults = await Promise.allSettled(
-        missingCoverTracks.map((track) =>
-          enrichTrackOnServer(request, track.id)
-        )
+        missingCoverTracks.map((track) => enrichTrackImageById(track.id))
       );
 
       const enrichMap = new Map<string, EnrichResponse>();
