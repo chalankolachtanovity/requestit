@@ -16,6 +16,7 @@ type SessionItem = {
   created_at: string;
   earned_cents: number;
   requests_count: number;
+  mode: "classic" | "most_requested";
 };
 
 type SessionsResponse = {
