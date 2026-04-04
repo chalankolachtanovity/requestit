@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
+type SessionMode = "classic" | "most_requested";
+
 type SessionRow = {
   id: string;
   name: string | null;
   slug: string;
   is_active: boolean;
+  mode: SessionMode;
   min_priority_amount_cents: number;
   allow_free_requests: boolean;
   allow_paid_requests: boolean;
@@ -51,7 +54,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("sessions")
       .select(
-        "id, name, slug, is_active, min_priority_amount_cents, allow_free_requests, allow_paid_requests, starts_at, created_at"
+        "id, name, slug, is_active, mode, min_priority_amount_cents, allow_free_requests, allow_paid_requests, starts_at, created_at"
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
@@ -115,6 +118,7 @@ export async function GET() {
 
     const sessionsWithData: SessionRow[] = sessions.map((session) => ({
       ...session,
+      mode: session.mode ?? "classic",
       earned_cents: earnedMap.get(session.id) ?? 0,
       requests_count: requestsCountMap.get(session.id) ?? 0,
     }));
@@ -136,12 +140,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       name,
+      mode,
       minPriorityAmountCents,
       allowFreeRequests,
       allowPaidRequests,
       startsAt,
     } = body as {
       name?: string;
+      mode?: SessionMode;
       minPriorityAmountCents?: number;
       allowFreeRequests?: boolean;
       allowPaidRequests?: boolean;
@@ -149,6 +155,8 @@ export async function POST(request: Request) {
     };
 
     const sessionName = name?.trim() || "New Session";
+    const sessionMode: SessionMode =
+      mode === "most_requested" ? "most_requested" : "classic";
 
     if (
       typeof minPriorityAmountCents !== "number" ||
@@ -177,6 +185,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const finalAllowFreeRequests =
+      sessionMode === "most_requested" ? true : allowFreeRequests;
+
+    const finalAllowPaidRequests =
+      sessionMode === "most_requested" ? false : allowPaidRequests;
+
+    const finalMinPriorityAmountCents =
+      sessionMode === "most_requested" ? 0 : minPriorityAmountCents;
 
     const supabase = await createSupabaseRouteClient();
 
@@ -228,14 +245,15 @@ export async function POST(request: Request) {
           name: sessionName,
           slug: sessionSlug,
           is_active: true,
-          min_priority_amount_cents: minPriorityAmountCents,
-          allow_free_requests: allowFreeRequests,
-          allow_paid_requests: allowPaidRequests,
+          mode: sessionMode,
+          min_priority_amount_cents: finalMinPriorityAmountCents,
+          allow_free_requests: finalAllowFreeRequests,
+          allow_paid_requests: finalAllowPaidRequests,
           starts_at: startsAt || null,
         },
       ])
       .select(
-        "id, name, slug, is_active, min_priority_amount_cents, allow_free_requests, allow_paid_requests, starts_at, created_at"
+        "id, name, slug, is_active, mode, min_priority_amount_cents, allow_free_requests, allow_paid_requests, starts_at, created_at"
       )
       .single();
 
@@ -255,6 +273,7 @@ export async function POST(request: Request) {
       success: true,
       session: {
         ...sessionData,
+        mode: sessionData.mode ?? "classic",
         earned_cents: 0,
         requests_count: 0,
       },

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+type SessionMode = "classic" | "most_requested";
 
 type RequestItem = {
   id: string;
@@ -19,11 +21,28 @@ type RequestItem = {
   } | null;
 };
 
-type ApiResponse = {
+type ClassicApiResponse = {
   incomingPaidRequests: RequestItem[];
   incomingFreeRequests: RequestItem[];
   toBePlayedPaidRequests: RequestItem[];
   toBePlayedFreeRequests: RequestItem[];
+};
+
+type MostRequestedItem = {
+  track_id: string | null;
+  custom_track_name: string | null;
+  custom_artist_name: string | null;
+  track_name: string;
+  artist: string;
+  image_url: string | null;
+  spotify_url: string | null;
+  request_count: number;
+  last_requested_at: string;
+};
+
+type MostRequestedApiResponse = {
+  mode: "most_requested";
+  mostRequested: MostRequestedItem[];
 };
 
 function TypeBadge({ type }: { type: "free" | "paid" }) {
@@ -59,21 +78,12 @@ function CoverImage({
   alt: string;
   size?: "sm" | "md";
 }) {
-  const classes =
-    size === "sm"
-      ? "h-10 w-10 rounded-md"
-      : "h-12 w-12 rounded-lg";
+  const classes = size === "sm" ? "h-10 w-10 rounded-md" : "h-12 w-12 rounded-lg";
 
   return (
-    <div
-      className={`flex-shrink-0 overflow-hidden bg-white/5 ${classes}`}
-    >
+    <div className={`flex-shrink-0 overflow-hidden bg-white/5 ${classes}`}>
       {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={alt}
-          className="h-full w-full object-cover"
-        />
+        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-white/28">
           <span className={size === "sm" ? "text-sm" : "text-base"}>♫</span>
@@ -252,26 +262,153 @@ function IncomingRow({
   );
 }
 
-export default function RequestsList({ sessionId }: { sessionId: string }) {
+function MostRequestedRow({
+  item,
+  index,
+  updatingId,
+  onPlayed,
+}: {
+  item: MostRequestedItem;
+  index: number;
+  updatingId: string | null;
+  onPlayed: (item: MostRequestedItem) => void;
+}) {
+  
+  const rowId =
+    item.track_id ||
+    `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`;
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.05]">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/5 text-sm font-semibold text-white/75">
+        {index + 1}
+      </div>
+
+      <CoverImage
+        imageUrl={item.image_url}
+        alt={`${item.track_name} cover`}
+        size="md"
+      />
+
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-base font-semibold text-white">
+          {item.track_name}
+        </h3>
+        <p className="truncate text-sm text-white/55">{item.artist}</p>
+      </div>
+
+      <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+        {item.request_count}x
+      </span>
+
+      <button
+        onClick={() => onPlayed(item)}
+        disabled={updatingId === rowId}
+        className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-50"
+      >
+        Played
+      </button>
+    </div>
+  );
+}
+
+export default function RequestsList({
+  sessionId,
+  mode,
+}: {
+  sessionId: string;
+  mode: SessionMode;
+}) {
   const supabase = getSupabaseBrowserClient();
 
   const [incomingPaidRequests, setIncomingPaidRequests] = useState<RequestItem[]>([]);
   const [incomingFreeRequests, setIncomingFreeRequests] = useState<RequestItem[]>([]);
   const [toBePlayedPaidRequests, setToBePlayedPaidRequests] = useState<RequestItem[]>([]);
   const [toBePlayedFreeRequests, setToBePlayedFreeRequests] = useState<RequestItem[]>([]);
+  const [mostRequested, setMostRequested] = useState<MostRequestedItem[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const toBePlayed = [...toBePlayedPaidRequests, ...toBePlayedFreeRequests];
-  const incoming = [...incomingPaidRequests, ...incomingFreeRequests];
+  const isMostRequestedMode = mode === "most_requested";
+
+  const markMostRequestedPlayed = async (item: MostRequestedItem) => {
+    try {
+      const rowId =
+        item.track_id ||
+        `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`;
+
+      setUpdatingId(rowId);
+
+      const res = await fetch("/api/request-status", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          trackId: item.track_id,
+          customTrackName: item.custom_track_name,
+          customArtistName: item.custom_artist_name,
+          status: "played",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Nepodarilo sa označiť skladbu ako played.");
+        return;
+      }
+
+      await fetchRequests();
+    } catch (err) {
+      console.error("MOST REQUESTED PLAYED ERROR:", err);
+      alert("Nepodarilo sa označiť skladbu ako played.");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const toBePlayed = useMemo(
+    () => [...toBePlayedPaidRequests, ...toBePlayedFreeRequests],
+    [toBePlayedPaidRequests, toBePlayedFreeRequests]
+  );
+
+  const incoming = useMemo(
+    () => [...incomingPaidRequests, ...incomingFreeRequests],
+    [incomingPaidRequests, incomingFreeRequests]
+  );
 
   const fetchRequests = async () => {
     try {
       setError("");
 
+      if (isMostRequestedMode) {
+        const res = await fetch(
+          `/api/live-preview?sessionId=${encodeURIComponent(sessionId)}`,
+          { cache: "no-store" }
+        );
+
+        const data: MostRequestedApiResponse | { error: string } = await res.json();
+
+        if (!res.ok || !("mode" in data) || data.mode !== "most_requested") {
+          setError("error" in data ? data.error : "Nepodarilo sa načítať rebríček.");
+          return;
+        }
+
+        setMostRequested(data.mostRequested ?? []);
+
+        setIncomingPaidRequests([]);
+        setIncomingFreeRequests([]);
+        setToBePlayedPaidRequests([]);
+        setToBePlayedFreeRequests([]);
+        return;
+      }
+
       const res = await fetch(`/api/requests?sessionId=${sessionId}`);
-      const data: ApiResponse | { error: string } = await res.json();
+      const data: ClassicApiResponse | { error: string } = await res.json();
 
       if (!res.ok || !("incomingPaidRequests" in data)) {
         setError(
@@ -284,9 +421,14 @@ export default function RequestsList({ sessionId }: { sessionId: string }) {
       setIncomingFreeRequests(data.incomingFreeRequests ?? []);
       setToBePlayedPaidRequests(data.toBePlayedPaidRequests ?? []);
       setToBePlayedFreeRequests(data.toBePlayedFreeRequests ?? []);
+      setMostRequested([]);
     } catch (err) {
       console.error("REQUESTS FETCH ERROR:", err);
-      setError("Nepodarilo sa načítať requesty.");
+      setError(
+        isMostRequestedMode
+          ? "Nepodarilo sa načítať rebríček."
+          : "Nepodarilo sa načítať requesty."
+      );
     } finally {
       setLoading(false);
     }
@@ -383,6 +525,7 @@ export default function RequestsList({ sessionId }: { sessionId: string }) {
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchRequests();
 
     const requestsChannel = supabase
@@ -412,7 +555,9 @@ export default function RequestsList({ sessionId }: { sessionId: string }) {
           filter: `session_id=eq.${sessionId}`,
         },
         () => {
-          fetchRequests();
+          if (!isMostRequestedMode) {
+            fetchRequests();
+          }
         }
       )
       .subscribe();
@@ -421,7 +566,7 @@ export default function RequestsList({ sessionId }: { sessionId: string }) {
       supabase.removeChannel(requestsChannel);
       supabase.removeChannel(paymentAttemptsChannel);
     };
-  }, [sessionId]);
+  }, [sessionId, isMostRequestedMode]);
 
   if (loading) {
     return <p className="text-white/60">Načítavam...</p>;
@@ -429,6 +574,46 @@ export default function RequestsList({ sessionId }: { sessionId: string }) {
 
   if (error) {
     return <p className="text-sm text-red-400">{error}</p>;
+  }
+
+  if (isMostRequestedMode) {
+    return (
+      <div className="space-y-10">
+        <section>
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-white/35">
+                Ranking
+              </p>
+              <h2 className="mt-1 text-2xl font-bold">Most Requested</h2>
+            </div>
+
+            <span className="text-sm text-white/35">{mostRequested.length}</span>
+          </div>
+
+          {mostRequested.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/45">
+              Zatiaľ tu nie sú žiadne requesty.
+            </div>
+          ) : (
+            <div className="space-y-3">
+          {mostRequested.map((item, index) => (
+            <MostRequestedRow
+              key={
+                item.track_id ||
+                `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`
+              }
+              item={item}
+              index={index}
+              updatingId={updatingId}
+              onPlayed={markMostRequestedPlayed}
+            />
+          ))}
+            </div>
+          )}
+        </section>
+      </div>
+    );
   }
 
   return (

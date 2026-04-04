@@ -3,17 +3,32 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+type SessionMode = "classic" | "most_requested";
+
 type SessionItem = {
   id: string;
   name: string | null;
   slug: string;
   is_active: boolean;
+  mode: SessionMode;
   min_priority_amount_cents: number;
   allow_free_requests: boolean;
   allow_paid_requests: boolean;
   starts_at: string | null;
   created_at: string;
 };
+
+function getModeLabel(mode: SessionMode) {
+  return mode === "most_requested" ? "Most Requested" : "Classic";
+}
+
+function getModeBadgeClasses(mode: SessionMode) {
+  if (mode === "most_requested") {
+    return "bg-cyan-400/15 text-cyan-200 border border-cyan-300/20";
+  }
+
+  return "bg-violet-400/15 text-violet-200 border border-violet-300/20";
+}
 
 export default function SessionCard({
   session,
@@ -93,7 +108,7 @@ export default function SessionCard({
                   {session.name || "Unnamed Event"}
                 </h3>
 
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                       session.is_active
@@ -102,6 +117,14 @@ export default function SessionCard({
                     }`}
                   >
                     {session.is_active ? "LIVE" : "ENDED"}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getModeBadgeClasses(
+                      session.mode
+                    )}`}
+                  >
+                    {getModeLabel(session.mode)}
                   </span>
 
                   {session.starts_at ? (
@@ -114,15 +137,29 @@ export default function SessionCard({
             </div>
 
             <div className="mb-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
-                Minimum {(session.min_priority_amount_cents / 100).toFixed(2)} €
-              </span>
+              {session.mode === "most_requested" ? (
+                <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-cyan-200">
+                  Most requested mode
+                </span>
+              ) : (
+                <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
+                  Minimum {(session.min_priority_amount_cents / 100).toFixed(2)} €
+                </span>
+              )}
 
               <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
                 Free {session.allow_free_requests ? "on" : "off"}
               </span>
 
-              <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
+              <span
+                className={`rounded-full bg-[#232323] px-3 py-1 text-xs ${
+                  session.allow_paid_requests
+                    ? "text-white/70"
+                    : session.mode === "most_requested"
+                    ? "text-cyan-200"
+                    : "text-white/50"
+                }`}
+              >
                 Paid {session.allow_paid_requests ? "on" : "off"}
               </span>
             </div>
@@ -132,7 +169,9 @@ export default function SessionCard({
                 href={`/dashboard/admin/session/${session.id}`}
                 className="inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
               >
-                Open Queue
+                {session.mode === "most_requested"
+                  ? "Open Most Requested"
+                  : "Open Queue"}
               </Link>
             </div>
 

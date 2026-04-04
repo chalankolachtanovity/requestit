@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 
 type RequestType = "free" | "paid";
+type SessionMode = "classic" | "most_requested";
 
 type RequestButtonProps = {
   sessionId: string;
   trackId: string | null;
   minPriorityAmountCents: number;
+  mode?: SessionMode;
   customMode?: boolean;
   initialCustomTrackName?: string;
   initialCustomArtistName?: string;
@@ -20,6 +22,7 @@ export default function RequestButton({
   sessionId,
   trackId,
   minPriorityAmountCents,
+  mode = "classic",
   customMode = false,
   initialCustomTrackName = "",
   initialCustomArtistName = "",
@@ -37,6 +40,8 @@ export default function RequestButton({
 
   const [customTrackName, setCustomTrackName] = useState(initialCustomTrackName);
   const [customArtistName, setCustomArtistName] = useState(initialCustomArtistName);
+
+  const isMostRequestedMode = mode === "most_requested";
 
   const presetAmounts = useMemo(() => {
     const base = [
@@ -83,7 +88,16 @@ export default function RequestButton({
       throw new Error(result.error || "Nepodarilo sa odoslať request.");
     }
 
-    setMessage("Request bol odoslaný.");
+    setMessage(
+      isMostRequestedMode
+        ? "Hlas bol pridaný."
+        : "Request bol odoslaný."
+    );
+
+    if (customMode && isMostRequestedMode) {
+      setCustomTrackName("");
+      setCustomArtistName("");
+    }
   };
 
   const handlePaidRequest = async () => {
@@ -155,10 +169,15 @@ export default function RequestButton({
     }
   };
 
-  const noRequestsEnabled = requestsPaused || (!allowFreeRequests && !allowPaidRequests);
+  const effectiveAllowPaidRequests = isMostRequestedMode
+    ? false
+    : allowPaidRequests;
+
+  const noRequestsEnabled =
+    requestsPaused || (!allowFreeRequests && !effectiveAllowPaidRequests);
 
   return (
-    <div className="flex w-full max-w-[320px] flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-2">
       {customMode ? (
         <div className="mb-2 w-full space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
           <input
@@ -190,24 +209,34 @@ export default function RequestButton({
               <button
                 onClick={() => handleRequest("free")}
                 disabled={loadingType !== null}
-                className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.05] disabled:opacity-50"
+                className={`rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition disabled:opacity-50 ${
+                isMostRequestedMode
+                  ? "border border-cyan-300/20 bg-cyan-400/12 text-cyan-200 hover:bg-cyan-400/18"
+                  : "border border-white/15 text-white hover:bg-white/[0.05]"
+              }`}
               >
-                {loadingType === "free" ? "Odosielam..." : "Request"}
+                {loadingType === "free"
+                  ? isMostRequestedMode
+                    ? "Pridávam hlas..."
+                    : "Odosielam..."
+                  : isMostRequestedMode
+                  ? "Pridať hlas"
+                  : "Request"}
               </button>
             ) : null}
 
-            {allowPaidRequests ? (
+            {effectiveAllowPaidRequests ? (
               <button
                 onClick={() => setShowPriorityBox((prev) => !prev)}
                 disabled={loadingType !== null}
-                className="rounded-full bg-amber-200/10 backdrop-blur-md border border-amber-300/20 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-200/20 disabled:opacity-50"
+                className="rounded-full border border-amber-300/20 bg-amber-200/10 px-4 py-2 text-sm font-semibold text-amber-200 backdrop-blur-md transition hover:bg-amber-200/20 disabled:opacity-50"
               >
                 Priority
               </button>
             ) : null}
           </div>
 
-          {showPriorityBox && allowPaidRequests ? (
+          {showPriorityBox && effectiveAllowPaidRequests ? (
             <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-3">
               <p className="mb-3 text-xs text-white/55">
                 Minimum priority suma: {(minPriorityAmountCents / 100).toFixed(2)} €

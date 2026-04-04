@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type SessionMode = "classic" | "most_requested";
 
 export default function CreateSessionForm({
   open,
@@ -12,12 +14,20 @@ export default function CreateSessionForm({
   onCreated: () => void;
 }) {
   const [name, setName] = useState("");
+  const [mode, setMode] = useState<SessionMode>("classic");
   const [minPriorityEuro, setMinPriorityEuro] = useState("2.00");
   const [allowFreeRequests, setAllowFreeRequests] = useState(true);
   const [allowPaidRequests, setAllowPaidRequests] = useState(true);
   const [startsAt, setStartsAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (mode === "most_requested") {
+      setAllowPaidRequests(false);
+      setAllowFreeRequests(true);
+    }
+  }, [mode]);
 
   if (!open) return null;
 
@@ -33,6 +43,15 @@ export default function CreateSessionForm({
         return;
       }
 
+      const finalAllowFreeRequests =
+        mode === "most_requested" ? true : allowFreeRequests;
+
+      const finalAllowPaidRequests =
+        mode === "most_requested" ? false : allowPaidRequests;
+
+      const finalMinPriorityAmountCents =
+        mode === "most_requested" ? 0 : Math.round(parsed * 100);
+
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: {
@@ -40,9 +59,10 @@ export default function CreateSessionForm({
         },
         body: JSON.stringify({
           name,
-          minPriorityAmountCents: Math.round(parsed * 100),
-          allowFreeRequests,
-          allowPaidRequests,
+          mode,
+          minPriorityAmountCents: finalMinPriorityAmountCents,
+          allowFreeRequests: finalAllowFreeRequests,
+          allowPaidRequests: finalAllowPaidRequests,
           startsAt: startsAt ? new Date(startsAt).toISOString() : null,
         }),
       });
@@ -55,6 +75,7 @@ export default function CreateSessionForm({
       }
 
       setName("");
+      setMode("classic");
       setMinPriorityEuro("2.00");
       setAllowFreeRequests(true);
       setAllowPaidRequests(true);
@@ -107,6 +128,64 @@ export default function CreateSessionForm({
 
           <div>
             <label className="mb-2 block text-sm font-medium text-white">
+              Event type
+            </label>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setMode("classic")}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  mode === "classic"
+                    ? "border-violet-400/40 bg-violet-400/10"
+                    : "border-white/10 bg-black/20 hover:bg-white/[0.03]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-white">Classic</p>
+                  {mode === "classic" ? (
+                    <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[10px] font-medium text-violet-200">
+                      Selected
+                    </span>
+                  ) : null}
+                </div>
+
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  Klasický režim. Free aj paid requests, queue podľa poradia a
+                  priority.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("most_requested")}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  mode === "most_requested"
+                    ? "border-cyan-400/40 bg-cyan-400/10"
+                    : "border-white/10 bg-black/20 hover:bg-white/[0.03]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-white">
+                    Most Requested
+                  </p>
+                  {mode === "most_requested" ? (
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-medium text-cyan-200">
+                      Selected
+                    </span>
+                  ) : null}
+                </div>
+
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  Iba free requests. Pesničky sa budú radiť podľa počtu
+                  requestov.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          <div className={mode === "most_requested" ? "opacity-50" : ""}>
+            <label className="mb-2 block text-sm font-medium text-white">
               Minimum request amount
             </label>
             <input
@@ -115,8 +194,14 @@ export default function CreateSessionForm({
               value={minPriorityEuro}
               onChange={(e) => setMinPriorityEuro(e.target.value)}
               placeholder="2.00"
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+              disabled={mode === "most_requested"}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
             />
+            {mode === "most_requested" ? (
+              <p className="mt-2 text-xs text-white/35">
+                V tomto režime sú paid requests vypnuté.
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -131,7 +216,11 @@ export default function CreateSessionForm({
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+          <div
+            className={`flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-4 ${
+              mode === "most_requested" ? "opacity-80" : ""
+            }`}
+          >
             <div>
               <p className="text-sm font-medium text-white">Free requests</p>
               <p className="mt-1 text-xs text-white/40">
@@ -141,10 +230,13 @@ export default function CreateSessionForm({
 
             <button
               type="button"
-              onClick={() => setAllowFreeRequests((prev) => !prev)}
+              onClick={() => {
+                if (mode === "most_requested") return;
+                setAllowFreeRequests((prev) => !prev);
+              }}
               className={`relative h-7 w-12 rounded-full transition ${
                 allowFreeRequests ? "bg-green-500" : "bg-white/15"
-              }`}
+              } ${mode === "most_requested" ? "cursor-not-allowed" : ""}`}
             >
               <span
                 className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${
@@ -154,7 +246,11 @@ export default function CreateSessionForm({
             </button>
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+          <div
+            className={`flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-4 ${
+              mode === "most_requested" ? "opacity-50" : ""
+            }`}
+          >
             <div>
               <p className="text-sm font-medium text-white">Paid requests</p>
               <p className="mt-1 text-xs text-white/40">
@@ -164,10 +260,13 @@ export default function CreateSessionForm({
 
             <button
               type="button"
-              onClick={() => setAllowPaidRequests((prev) => !prev)}
+              onClick={() => {
+                if (mode === "most_requested") return;
+                setAllowPaidRequests((prev) => !prev);
+              }}
               className={`relative h-7 w-12 rounded-full transition ${
                 allowPaidRequests ? "bg-green-500" : "bg-white/15"
-              }`}
+              } ${mode === "most_requested" ? "cursor-not-allowed" : ""}`}
             >
               <span
                 className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${

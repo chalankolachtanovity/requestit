@@ -5,6 +5,8 @@ import SessionSubnav from "@/components/admin/SessionSubnav";
 import SessionRequestControls from "@/components/admin/SessionRequestControls";
 import DashboardCredits from "@/components/admin/DashboardCredits";
 
+type SessionMode = "classic" | "most_requested";
+
 type PageProps = {
   params: Promise<{
     sessionId: string;
@@ -26,7 +28,7 @@ export default async function AdminSessionPage({ params }: PageProps) {
 
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id, user_id, name, requests_paused, is_active")
+    .select("id, user_id, name, mode, requests_paused, is_active")
     .eq("id", sessionId)
     .single();
 
@@ -37,6 +39,9 @@ export default async function AdminSessionPage({ params }: PageProps) {
   if (session.user_id !== user.id) {
     redirect("/dashboard");
   }
+
+  const sessionMode: SessionMode =
+    session.mode === "most_requested" ? "most_requested" : "classic";
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -51,7 +56,10 @@ export default async function AdminSessionPage({ params }: PageProps) {
 
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-bold">
-                {session.name || "Queue"}
+                {session.name ||
+                  (sessionMode === "most_requested"
+                    ? "Most Requested"
+                    : "Queue")}
               </h1>
 
               <span
@@ -63,7 +71,25 @@ export default async function AdminSessionPage({ params }: PageProps) {
               >
                 {session.is_active ? "LIVE" : "ENDED"}
               </span>
+
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  sessionMode === "most_requested"
+                    ? "border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"
+                    : "border border-violet-300/20 bg-violet-400/10 text-violet-200"
+                }`}
+              >
+                {sessionMode === "most_requested"
+                  ? "Most Requested"
+                  : "Classic"}
+              </span>
             </div>
+
+            <p className="mt-3 max-w-2xl text-sm text-white/45">
+              {sessionMode === "most_requested"
+                ? "Pesničky sú zoradené podľa počtu requestov a nové hlasovania sa prijímajú automaticky."
+                : "Spravuj queue requestov, prijímaj ich a rozhoduj o poradí prehrávania."}
+            </p>
           </div>
 
           <DashboardCredits />
@@ -75,7 +101,7 @@ export default async function AdminSessionPage({ params }: PageProps) {
           isActive={session.is_active}
         />
 
-        <RequestsList sessionId={sessionId} />
+        <RequestsList sessionId={sessionId} mode={sessionMode} />
       </div>
     </main>
   );
