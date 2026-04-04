@@ -62,65 +62,27 @@ type SpotifySearchResponse = {
   };
 };
 
+let spotifyCooldownUntil = 0;
+
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
-}
-
-function normalizeForDedupe(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/\[[^\]]*\]/g, " ")
-    .replace(
-      /[-–—]\s*(remaster(ed)?|version|radio edit|edit|mono|stereo|live|acoustic|deluxe).*$/i,
-      " "
-    )
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function buildDedupeKey(trackName: string, artist: string) {
   return `${normalizeText(trackName)}|${normalizeText(artist)}`;
 }
 
-function buildTrackDedupeKey(trackName: string, artist: string) {
-  return `${normalizeForDedupe(trackName)}|${normalizeForDedupe(artist)}`;
+function isSpotifyCooldownActive() {
+  return Date.now() < spotifyCooldownUntil;
 }
 
-function pickBetterTrack(a: EnrichedTrackRow, b: EnrichedTrackRow) {
-  const aScore =
-    (a.image_url ? 3 : 0) +
-    (a.spotify_url ? 2 : 0) +
-    (a.popularity ?? 0);
+function setSpotifyCooldown(retryAfterSeconds: number) {
+  const safeSeconds =
+    Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? retryAfterSeconds
+      : 10;
 
-  const bScore =
-    (b.image_url ? 3 : 0) +
-    (b.spotify_url ? 2 : 0) +
-    (b.popularity ?? 0);
-
-  return bScore > aScore ? b : a;
-}
-
-function dedupeEnrichedTracks(tracks: EnrichedTrackRow[]): EnrichedTrackRow[] {
-  const map = new Map<string, EnrichedTrackRow>();
-
-  for (const track of tracks) {
-    const key = buildTrackDedupeKey(track.track_name, track.artist);
-    const existing = map.get(key);
-
-    if (!existing) {
-      map.set(key, track);
-      continue;
-    }
-
-    map.set(key, pickBetterTrack(existing, track));
-  }
-
-  return Array.from(map.values())
-    .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
-    .slice(0, 10);
+  spotifyCooldownUntil = Date.now() + safeSeconds * 1000;
 }
 
 async function enrichTrackOnServer(
@@ -174,6 +136,17 @@ async function getSpotifyAccessToken() {
     cache: "no-store",
   });
 
+  if (response.status === 429) {
+    const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
+
+    console.warn("Spotify token rate limit hit", {
+      retryAfter,
+    });
+
+    setSpotifyCooldown(retryAfter);
+    throw new Error("Spotify cooldown active.");
+  }
+
   const result = (await response.json()) as
     | SpotifyTokenResponse
     | { error: string };
@@ -187,12 +160,20 @@ async function getSpotifyAccessToken() {
 
 async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
   try {
+    if (isSpotifyCooldownActive()) {
+      return [];
+    }
+
     const token = await getSpotifyAccessToken();
+
+    if (isSpotifyCooldownActive()) {
+      return [];
+    }
 
     const url = new URL("https://api.spotify.com/v1/search");
     url.searchParams.set("q", query);
     url.searchParams.set("type", "track");
-    url.searchParams.set("limit", "20");
+    url.searchParams.set("limit", "10");
     url.searchParams.set("market", "SK");
 
     const response = await fetch(url.toString(), {
@@ -203,37 +184,46 @@ async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
     });
 
     if (response.status === 429) {
-      console.warn("Spotify rate limit hit", {
-        retryAfter: response.headers.get("Retry-After"),
+      const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
+
+      console.warn("Spotify search rate limit hit", {
+        retryAfter,
       });
+
+      setSpotifyCooldown(retryAfter);
       return [];
     }
 
     if (!response.ok) {
-      console.error("Spotify error:", response.status);
+      const errorText = await response.text();
+
+      console.error("Spotify error:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: url.toString(),
+        body: errorText,
+      });
+
       return [];
     }
 
     const result: SpotifySearchResponse = await response.json();
+
     const items: SpotifyTrackItem[] = result.tracks?.items ?? [];
 
-    const mappedTracks: EnrichedTrackRow[] = items.map(
-      (item: SpotifyTrackItem) => ({
-        id: crypto.randomUUID(),
-        spotify_track_id: item.id,
-        track_name: item.name,
-        artist: item.artists
-          .map((artist: SpotifyArtist) => artist.name)
-          .join(", "),
-        album_name: item.album?.name ?? null,
-        popularity: item.popularity ?? null,
-        duration_ms: item.duration_ms ?? null,
-        image_url: item.album?.images?.[0]?.url ?? null,
-        spotify_url: item.external_urls?.spotify ?? null,
-      })
-    );
-
-    return dedupeEnrichedTracks(mappedTracks);
+    return items.map((item: SpotifyTrackItem) => ({
+      id: crypto.randomUUID(),
+      spotify_track_id: item.id,
+      track_name: item.name,
+      artist: item.artists
+        .map((artist: SpotifyArtist) => artist.name)
+        .join(", "),
+      album_name: item.album?.name ?? null,
+      popularity: item.popularity ?? null,
+      duration_ms: item.duration_ms ?? null,
+      image_url: item.album?.images?.[0]?.url ?? null,
+      spotify_url: item.external_urls?.spotify ?? null,
+    }));
   } catch (error) {
     console.error("Spotify search failed:", error);
     return [];
@@ -246,9 +236,7 @@ async function saveSpotifyTracksToDb(
 ) {
   if (tracks.length === 0) return;
 
-  const dedupedTracks = dedupeEnrichedTracks(tracks);
-
-  const rowsToInsert = dedupedTracks.map((track) => ({
+  const rowsToInsert = tracks.map((track) => ({
     spotify_track_id: track.spotify_track_id,
     track_name: track.track_name,
     artist: track.artist,
@@ -257,7 +245,7 @@ async function saveSpotifyTracksToDb(
     duration_ms: track.duration_ms,
     image_url: track.image_url,
     spotify_url: track.spotify_url,
-    dedupe_key: buildTrackDedupeKey(track.track_name, track.artist),
+    dedupe_key: buildDedupeKey(track.track_name, track.artist),
     search_text: `${track.track_name} ${track.artist} ${
       track.album_name ?? ""
     }`.toLowerCase(),
@@ -281,7 +269,7 @@ function dedupeTracks(rows: TrackRow[]): EnrichedTrackRow[] {
 
   for (const track of rows) {
     const key =
-      track.dedupe_key || buildTrackDedupeKey(track.track_name, track.artist);
+      track.dedupe_key || buildDedupeKey(track.track_name, track.artist);
 
     if (seen.has(key)) continue;
     seen.add(key);
