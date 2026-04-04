@@ -310,11 +310,14 @@ const MostRequestedRow = memo(function MostRequestedRow({
           title="Pridať hlas"
         >
           {isVoting ? (
-            <span className="text-[11px] font-bold text-cyan-200 animate-pulse">
+            <span className="animate-pulse text-[11px] font-bold text-cyan-200">
               +1
             </span>
           ) : (
-            <ArrowUp className="h-5 w-5 text-cyan-200 transition group-hover:text-white" strokeWidth={3} />
+            <ArrowUp
+              className="h-5 w-5 text-cyan-200 transition group-hover:text-white"
+              strokeWidth={3}
+            />
           )}
         </button>
       </div>
@@ -329,6 +332,7 @@ export default function SearchBar({
 }: SearchBarProps) {
   const supabaseRef = useRef(getSupabaseBrowserClient());
   const supabase = supabaseRef.current;
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const previousCountsRef = useRef<Record<string, number>>({});
   const livePreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -336,6 +340,7 @@ export default function SearchBar({
   );
 
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -364,18 +369,20 @@ export default function SearchBar({
   );
 
   const trimmedQuery = query.trim();
+  const trimmedSubmittedQuery = submittedQuery.trim();
   const isMostRequestedMode = mode === "most_requested";
 
   const visibleMostRequested = useMemo(
-    () =>
-      showAllMostRequested ? mostRequested : mostRequested.slice(0, 5),
+    () => (showAllMostRequested ? mostRequested : mostRequested.slice(0, 5)),
     [mostRequested, showAllMostRequested]
   );
 
   const getMostRequestedKey = useCallback((item: MostRequestedItem) => {
     return (
       item.track_id ||
-      `${item.custom_track_name ?? item.track_name}::${item.custom_artist_name ?? item.artist}`
+      `${item.custom_track_name ?? item.track_name}::${
+        item.custom_artist_name ?? item.artist
+      }`
     );
   }, []);
 
@@ -471,6 +478,23 @@ export default function SearchBar({
     }, 150);
   }, [fetchLivePreview]);
 
+  const handleSearchSubmit = useCallback(() => {
+    const nextQuery = query.trim();
+
+    setShowCustomSongForm(false);
+
+    if (nextQuery.length < 2) {
+      setSubmittedQuery("");
+      setTracks([]);
+      setHasSearched(false);
+      return;
+    }
+
+    setSubmittedQuery(nextQuery);
+    setHasSearched(false);
+    inputRef.current?.blur();
+  }, [query]);
+
   const handleVote = useCallback(
     async (item: MostRequestedItem) => {
       const itemKey = getMostRequestedKey(item);
@@ -517,7 +541,12 @@ export default function SearchBar({
         setVotingKey(null);
       }
     },
-    [fetchLivePreview, getMostRequestedKey, scheduleLivePreviewRefresh, sessionId]
+    [
+      fetchLivePreview,
+      getMostRequestedKey,
+      scheduleLivePreviewRefresh,
+      sessionId,
+    ]
   );
 
   useEffect(() => {
@@ -565,27 +594,21 @@ export default function SearchBar({
   }, [fetchLivePreview, scheduleLivePreviewRefresh, sessionId, supabase]);
 
   useEffect(() => {
-    setShowCustomSongForm(false);
-    setHasSearched(false);
-
-    if (!trimmedQuery) {
-      setTracks([]);
-      return;
-    }
-
-    if (trimmedQuery.length < 2) {
+    if (!trimmedSubmittedQuery) {
       setTracks([]);
       return;
     }
 
     const controller = new AbortController();
 
-    const timeout = setTimeout(async () => {
+    const runSearch = async () => {
       try {
         setLoading(true);
 
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(trimmedQuery)}&sessionId=${encodeURIComponent(sessionId)}`,
+          `/api/search?q=${encodeURIComponent(
+            trimmedSubmittedQuery
+          )}&sessionId=${encodeURIComponent(sessionId)}`,
           { signal: controller.signal }
         );
 
@@ -612,13 +635,14 @@ export default function SearchBar({
         setLoading(false);
         setHasSearched(true);
       }
-    }, 250);
+    };
+
+    runSearch();
 
     return () => {
       controller.abort();
-      clearTimeout(timeout);
     };
-  }, [trimmedQuery, sessionId, isMostRequestedMode]);
+  }, [trimmedSubmittedQuery, sessionId, isMostRequestedMode]);
 
   useEffect(() => {
     if (!isMostRequestedMode || mostRequested.length === 0) return;
@@ -747,34 +771,52 @@ export default function SearchBar({
           <p className="text-sm font-semibold text-white">Search</p>
         </div>
 
-        <div className="relative">
-          <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/30">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearchSubmit();
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/30">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+            </div>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Hľadaj song alebo interpreta"
+              enterKeyHint="search"
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-11 py-2 text-base text-white outline-none placeholder:text-white/35"
+            />
           </div>
 
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Hľadaj song alebo interpreta"
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-11 py-4 text-base text-white outline-none placeholder:text-white/35"
-          />
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-2xl border border-white/10 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:opacity-95 disabled:opacity-50"
+          >
+            Search
+          </button>
+        </form>
 
         <div className="mt-4">
-          {!trimmedQuery ? (
+          {!trimmedSubmittedQuery ? (
             <p className="text-sm text-white/40">
-              Začni písať názov pesničky alebo interpreta.
+              Zadaj názov pesničky alebo interpreta a klikni na Search.
             </p>
           ) : loading ? (
             <p className="text-sm text-white/40">Vyhľadávam...</p>
@@ -798,7 +840,7 @@ export default function SearchBar({
                     trackId={null}
                     minPriorityAmountCents={minPriorityAmountCents}
                     mode={mode}
-                    initialCustomTrackName={trimmedQuery}
+                    initialCustomTrackName={trimmedSubmittedQuery}
                     initialCustomArtistName=""
                     customMode
                     allowFreeRequests={allowFreeRequests}
@@ -834,7 +876,7 @@ export default function SearchBar({
                   sessionId={sessionId}
                   minPriorityAmountCents={minPriorityAmountCents}
                   mode={mode}
-                  trimmedQuery={trimmedQuery}
+                  trimmedQuery={trimmedSubmittedQuery}
                   showCustomSongForm={showCustomSongForm}
                   setShowCustomSongForm={setShowCustomSongForm}
                   allowFreeRequests={allowFreeRequests}
