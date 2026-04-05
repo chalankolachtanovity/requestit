@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { enrichTrackImageById } from "@/lib/tracks/enrich-track-image";
 
 type TrackRow = {
@@ -22,6 +23,10 @@ type SessionRow = {
 };
 
 type EnrichedTrackRow = Omit<TrackRow, "dedupe_key">;
+
+type SpotifySearchTrack = Omit<EnrichedTrackRow, "id"> & {
+  id: null;
+};
 
 type EnrichResponse = {
   image_url?: string | null;
@@ -111,10 +116,7 @@ async function getSpotifyAccessToken() {
   if (response.status === 429) {
     const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
 
-    console.warn("Spotify token rate limit hit", {
-      retryAfter,
-    });
-
+    console.warn("Spotify token rate limit hit", { retryAfter });
     setSpotifyCooldown(retryAfter);
     throw new Error("Spotify cooldown active.");
   }
@@ -130,7 +132,9 @@ async function getSpotifyAccessToken() {
   return result.access_token;
 }
 
-async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
+async function searchSpotifyTracks(
+  query: string
+): Promise<SpotifySearchTrack[]> {
   try {
     if (isSpotifyCooldownActive()) {
       return [];
@@ -158,10 +162,7 @@ async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
     if (response.status === 429) {
       const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
 
-      console.warn("Spotify search rate limit hit", {
-        retryAfter,
-      });
-
+      console.warn("Spotify search rate limit hit", { retryAfter });
       setSpotifyCooldown(retryAfter);
       return [];
     }
@@ -180,16 +181,13 @@ async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
     }
 
     const result: SpotifySearchResponse = await response.json();
-
     const items: SpotifyTrackItem[] = result.tracks?.items ?? [];
 
-    return items.map((item: SpotifyTrackItem) => ({
-      id: crypto.randomUUID(),
+    return items.map((item) => ({
+      id: null,
       spotify_track_id: item.id,
       track_name: item.name,
-      artist: item.artists
-        .map((artist: SpotifyArtist) => artist.name)
-        .join(", "),
+      artist: item.artists.map((artist) => artist.name).join(", "),
       album_name: item.album?.name ?? null,
       popularity: item.popularity ?? null,
       duration_ms: item.duration_ms ?? null,
@@ -199,39 +197,6 @@ async function searchSpotifyTracks(query: string): Promise<EnrichedTrackRow[]> {
   } catch (error) {
     console.error("Spotify search failed:", error);
     return [];
-  }
-}
-
-async function saveSpotifyTracksToDb(
-  supabase: Awaited<ReturnType<typeof createSupabaseRouteClient>>,
-  tracks: EnrichedTrackRow[]
-) {
-  if (tracks.length === 0) return;
-
-  const rowsToInsert = tracks.map((track) => ({
-    spotify_track_id: track.spotify_track_id,
-    track_name: track.track_name,
-    artist: track.artist,
-    album_name: track.album_name,
-    popularity: track.popularity,
-    duration_ms: track.duration_ms,
-    image_url: track.image_url,
-    spotify_url: track.spotify_url,
-    dedupe_key: buildDedupeKey(track.track_name, track.artist),
-    search_text: `${track.track_name} ${track.artist} ${
-      track.album_name ?? ""
-    }`.toLowerCase(),
-  }));
-
-  const { error } = await supabase.from("tracks").upsert(rowsToInsert, {
-    onConflict: "spotify_track_id",
-    ignoreDuplicates: false,
-  });
-
-  if (error) {
-    console.error("SAVE SPOTIFY TRACKS ERROR:", error);
-  } else {
-    console.log("Spotify tracky boli ulozene do DB:", rowsToInsert.length);
   }
 }
 
@@ -279,6 +244,63 @@ async function searchTracksInDb(
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  return dedupeTracks((data ?? []) as TrackRow[]);
+}
+
+async function saveSpotifyTracksToDb(
+  tracks: SpotifySearchTrack[]
+): Promise<EnrichedTrackRow[]> {
+  if (tracks.length === 0) return [];
+
+  const supabaseAdmin = createSupabaseAdminClient();
+
+  const rowsToInsert = tracks.map((track) => ({
+    spotify_track_id: track.spotify_track_id,
+    track_name: track.track_name,
+    artist: track.artist,
+    album_name: track.album_name,
+    popularity: track.popularity,
+    duration_ms: track.duration_ms,
+    image_url: track.image_url,
+    spotify_url: track.spotify_url,
+    dedupe_key: buildDedupeKey(track.track_name, track.artist),
+    search_text: `${track.track_name} ${track.artist} ${
+      track.album_name ?? ""
+    }`.toLowerCase(),
+  }));
+
+  const { error: upsertError } = await supabaseAdmin.from("tracks").upsert(
+    rowsToInsert,
+    {
+      onConflict: "spotify_track_id",
+      ignoreDuplicates: false,
+    }
+  );
+  console.log("ROWS TO INSERT:", rowsToInsert.length);
+  if (upsertError) {
+    console.error("SAVE SPOTIFY TRACKS ERROR:", upsertError);
+    return [];
+  }
+
+  const spotifyIds = tracks
+    .map((track) => track.spotify_track_id)
+    .filter((id): id is string => Boolean(id));
+
+  if (spotifyIds.length === 0) return [];
+
+  const { data, error: fetchError } = await supabaseAdmin
+    .from("tracks")
+    .select(
+      "id, spotify_track_id, track_name, artist, album_name, popularity, duration_ms, image_url, spotify_url, dedupe_key"
+    )
+    .in("spotify_track_id", spotifyIds)
+    .order("popularity", { ascending: false, nullsFirst: false });
+
+  if (fetchError) {
+    console.error("FETCH SAVED SPOTIFY TRACKS ERROR:", fetchError);
+    return [];
   }
 
   return dedupeTracks((data ?? []) as TrackRow[]);
@@ -336,17 +358,12 @@ export async function GET(request: Request) {
     if (finalTracks.length === 0) {
       try {
         const spotifyTracks = await searchSpotifyTracks(q);
+        console.log("SPOTIFY TRACKS FOUND:", spotifyTracks.length);
 
         if (spotifyTracks.length > 0) {
-          await saveSpotifyTracksToDb(supabase, spotifyTracks);
-
-          const dbTracksAfterSave = await searchTracksInDb(
-            supabase,
-            q.toLowerCase()
-          );
-
-          finalTracks =
-            dbTracksAfterSave.length > 0 ? dbTracksAfterSave : spotifyTracks;
+          const savedTracks = await saveSpotifyTracksToDb(spotifyTracks);
+          console.log("SPOTIFY TRACKS SAVED:", savedTracks.length);
+          finalTracks = savedTracks;
         }
       } catch (spotifyError) {
         console.error("SPOTIFY FALLBACK ERROR:", spotifyError);

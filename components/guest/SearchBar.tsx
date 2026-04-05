@@ -118,7 +118,8 @@ const CustomSongPrompt = memo(function CustomSongPrompt({
       </p>
 
       <p className="mt-1 text-sm text-white/45">
-        Môžeš ju pridať manuálne ako vlastný request.
+        Skús napísať aj názov interpreta.<br></br>
+        Ak nenájdeš, môžeš ju pridať manuálne.
       </p>
 
       {!showCustomSongForm ? (

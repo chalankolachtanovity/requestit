@@ -68,6 +68,15 @@ export default function RequestButton({
 
     validateCustomSong();
 
+    console.log("REQUESTBUTTON trackId prop:", trackId);
+    console.log("REQUESTBUTTON body:", {
+      sessionId,
+      trackId,
+      type: "free",
+      customTrackName,
+      customArtistName,
+    });
+
     const response = await fetch("/api/request", {
       method: "POST",
       headers: {

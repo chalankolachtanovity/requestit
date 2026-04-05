@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -12,6 +13,10 @@ type SessionRow = {
 
 type LastRequestRow = {
   created_at: string;
+};
+
+type TrackLookupRow = {
+  id: string;
 };
 
 function getClientIp(request: Request) {
@@ -61,6 +66,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createSupabaseRouteClient();
+    const supabaseAdmin = createSupabaseAdminClient();
     const ip = getClientIp(request);
 
     const sessionPromise = supabase
@@ -140,11 +146,64 @@ export async function POST(request: Request) {
       }
     }
 
+    let resolvedTrackId: string | null = null;
+
+    if (trackId) {
+      console.log("REQUEST TRACK ID RECEIVED:", trackId);
+
+      const { data: trackById, error: trackByIdError } = await supabaseAdmin
+        .from("tracks")
+        .select("id")
+        .eq("id", trackId)
+        .maybeSingle();
+
+      if (trackByIdError) {
+        console.error("TRACK LOOKUP BY ID ERROR:", trackByIdError);
+        return NextResponse.json(
+          { error: "Nepodarilo sa overiť track." },
+          { status: 500 }
+        );
+      }
+
+      if (trackById) {
+        resolvedTrackId = (trackById as TrackLookupRow).id;
+      } else {
+        const { data: trackBySpotifyId, error: trackBySpotifyIdError } =
+          await supabaseAdmin
+            .from("tracks")
+            .select("id")
+            .eq("spotify_track_id", trackId)
+            .maybeSingle();
+
+        if (trackBySpotifyIdError) {
+          console.error(
+            "TRACK LOOKUP BY SPOTIFY ID ERROR:",
+            trackBySpotifyIdError
+          );
+          return NextResponse.json(
+            { error: "Nepodarilo sa overiť Spotify track." },
+            { status: 500 }
+          );
+        }
+
+        if (trackBySpotifyId) {
+          resolvedTrackId = (trackBySpotifyId as TrackLookupRow).id;
+        } else {
+          return NextResponse.json(
+            { error: "Track sa nenašiel v databáze tracks." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    console.log("REQUEST RESOLVED TRACK ID:", resolvedTrackId);
+
     const { data: insertedRequest, error: insertError } = await supabase
       .from("requests")
       .insert({
         session_id: sessionId,
-        track_id: trackId ?? null,
+        track_id: resolvedTrackId,
         type: finalType,
         status: finalStatus,
         client_ip: ip,
@@ -163,7 +222,6 @@ export async function POST(request: Request) {
     }
 
     if (!trackId && hasCustomSong) {
-      // vedľajší zápis, nech nespomalí úspešný request flow
       supabase
         .from("custom_tracks")
         .insert({
