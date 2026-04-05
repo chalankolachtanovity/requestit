@@ -13,7 +13,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ArrowUp } from "lucide-react";
 
 type Track = {
-  id: string;
+  id: string | null;
   spotify_track_id: string | null;
   track_name: string;
   artist: string;
@@ -235,15 +235,21 @@ const SearchResultRow = memo(function SearchResultRow({
         </div>
 
         <div className="flex-shrink-0">
-          <RequestButton
-            sessionId={sessionId}
-            trackId={track.id}
-            minPriorityAmountCents={minPriorityAmountCents}
-            mode={mode}
-            allowFreeRequests={allowFreeRequests}
-            allowPaidRequests={allowPaidRequests}
-            requestsPaused={requestsPaused}
-          />
+        <RequestButton
+          sessionId={sessionId}
+          trackId={track.id}
+          spotifyTrackId={track.spotify_track_id}
+          trackName={track.track_name}
+          artist={track.artist}
+          albumName={track.album_name}
+          imageUrl={track.image_url}
+          spotifyUrl={track.spotify_url}
+          minPriorityAmountCents={minPriorityAmountCents}
+          mode={mode}
+          allowFreeRequests={allowFreeRequests}
+          allowPaidRequests={allowPaidRequests}
+          requestsPaused={requestsPaused}
+        />
         </div>
       </div>
     </div>
@@ -858,7 +864,7 @@ export default function SearchBar({
               <div className="space-y-3">
                 {tracks.map((track) => (
                   <SearchResultRow
-                    key={track.id}
+                    key={track.id ?? track.spotify_track_id ?? `${track.track_name}-${track.artist}`}
                     track={track}
                     sessionId={sessionId}
                     minPriorityAmountCents={minPriorityAmountCents}

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { enrichTrackImageById } from "@/lib/tracks/enrich-track-image";
 
 type TrackRow = {
   id: string;
@@ -26,11 +25,6 @@ type EnrichedTrackRow = Omit<TrackRow, "dedupe_key">;
 
 type SpotifySearchTrack = Omit<EnrichedTrackRow, "id"> & {
   id: null;
-};
-
-type EnrichResponse = {
-  image_url?: string | null;
-  spotify_url?: string | null;
 };
 
 type SpotifyTokenResponse = {
@@ -62,6 +56,15 @@ type SpotifyTrackItem = {
   };
 };
 
+type SpotifyTrackDetailsResponse = {
+  album?: {
+    images?: SpotifyAlbumImage[];
+  };
+  external_urls?: {
+    spotify?: string;
+  };
+};
+
 type SpotifySearchResponse = {
   tracks?: {
     items?: SpotifyTrackItem[];
@@ -69,6 +72,10 @@ type SpotifySearchResponse = {
 };
 
 let spotifyCooldownUntil = 0;
+let spotifyTokenCache: {
+  accessToken: string;
+  expiresAt: number;
+} | null = null;
 
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
@@ -92,6 +99,10 @@ function setSpotifyCooldown(retryAfterSeconds: number) {
 }
 
 async function getSpotifyAccessToken() {
+  if (spotifyTokenCache && Date.now() < spotifyTokenCache.expiresAt) {
+    return spotifyTokenCache.accessToken;
+  }
+
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
@@ -115,8 +126,6 @@ async function getSpotifyAccessToken() {
 
   if (response.status === 429) {
     const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
-
-    console.warn("Spotify token rate limit hit", { retryAfter });
     setSpotifyCooldown(retryAfter);
     throw new Error("Spotify cooldown active.");
   }
@@ -129,22 +138,67 @@ async function getSpotifyAccessToken() {
     throw new Error("Nepodarilo sa získať Spotify token.");
   }
 
+  spotifyTokenCache = {
+    accessToken: result.access_token,
+    expiresAt: Date.now() + Math.max((result.expires_in - 30) * 1000, 30_000),
+  };
+
   return result.access_token;
+}
+
+function dedupeTracks(rows: Array<TrackRow | SpotifySearchTrack>): Array<EnrichedTrackRow | SpotifySearchTrack> {
+  const seen = new Set<string>();
+  const deduped: Array<EnrichedTrackRow | SpotifySearchTrack> = [];
+
+  for (const track of rows) {
+    const key =
+      ("dedupe_key" in track && track.dedupe_key) ||
+      buildDedupeKey(track.track_name, track.artist);
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    if ("dedupe_key" in track) {
+      deduped.push({
+        id: track.id,
+        spotify_track_id: track.spotify_track_id,
+        track_name: track.track_name,
+        artist: track.artist,
+        album_name: track.album_name,
+        popularity: track.popularity,
+        duration_ms: track.duration_ms,
+        image_url: track.image_url,
+        spotify_url: track.spotify_url,
+      });
+    } else {
+      deduped.push({
+        id: null,
+        spotify_track_id: track.spotify_track_id,
+        track_name: track.track_name,
+        artist: track.artist,
+        album_name: track.album_name,
+        popularity: track.popularity,
+        duration_ms: track.duration_ms,
+        image_url: track.image_url,
+        spotify_url: track.spotify_url,
+      });
+    }
+
+    if (deduped.length >= 10) break;
+  }
+
+  return deduped;
 }
 
 async function searchSpotifyTracks(
   query: string
 ): Promise<SpotifySearchTrack[]> {
   try {
-    if (isSpotifyCooldownActive()) {
-      return [];
-    }
+    if (isSpotifyCooldownActive()) return [];
 
     const token = await getSpotifyAccessToken();
 
-    if (isSpotifyCooldownActive()) {
-      return [];
-    }
+    if (isSpotifyCooldownActive()) return [];
 
     const url = new URL("https://api.spotify.com/v1/search");
     url.searchParams.set("q", query);
@@ -161,78 +215,46 @@ async function searchSpotifyTracks(
 
     if (response.status === 429) {
       const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
-
-      console.warn("Spotify search rate limit hit", { retryAfter });
       setSpotifyCooldown(retryAfter);
       return [];
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
-
-      console.error("Spotify error:", {
+      const errorText = await response.text().catch(() => "");
+      console.error("Spotify search failed:", {
         status: response.status,
         statusText: response.statusText,
-        url: url.toString(),
         body: errorText,
       });
-
       return [];
     }
 
     const result: SpotifySearchResponse = await response.json();
     const items: SpotifyTrackItem[] = result.tracks?.items ?? [];
 
-    return items.map((item) => ({
-      id: null,
-      spotify_track_id: item.id,
-      track_name: item.name,
-      artist: item.artists.map((artist) => artist.name).join(", "),
-      album_name: item.album?.name ?? null,
-      popularity: item.popularity ?? null,
-      duration_ms: item.duration_ms ?? null,
-      image_url: item.album?.images?.[0]?.url ?? null,
-      spotify_url: item.external_urls?.spotify ?? null,
-    }));
+    return dedupeTracks(
+      items.map((item) => ({
+        id: null,
+        spotify_track_id: item.id,
+        track_name: item.name,
+        artist: item.artists.map((artist) => artist.name).join(", "),
+        album_name: item.album?.name ?? null,
+        popularity: item.popularity ?? null,
+        duration_ms: item.duration_ms ?? null,
+        image_url: item.album?.images?.[0]?.url ?? null,
+        spotify_url: item.external_urls?.spotify ?? null,
+      }))
+    ) as SpotifySearchTrack[];
   } catch (error) {
     console.error("Spotify search failed:", error);
     return [];
   }
 }
 
-function dedupeTracks(rows: TrackRow[]): EnrichedTrackRow[] {
-  const seen = new Set<string>();
-  const deduped: EnrichedTrackRow[] = [];
-
-  for (const track of rows) {
-    const key =
-      track.dedupe_key || buildDedupeKey(track.track_name, track.artist);
-
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    deduped.push({
-      id: track.id,
-      spotify_track_id: track.spotify_track_id,
-      track_name: track.track_name,
-      artist: track.artist,
-      album_name: track.album_name,
-      popularity: track.popularity,
-      duration_ms: track.duration_ms,
-      image_url: track.image_url,
-      spotify_url: track.spotify_url,
-    });
-
-    if (deduped.length >= 10) break;
-  }
-
-  return deduped;
-}
-
 async function searchTracksInDb(
   supabase: Awaited<ReturnType<typeof createSupabaseRouteClient>>,
   query: string
-) {
+): Promise<EnrichedTrackRow[]> {
   const { data, error } = await supabase
     .from("tracks")
     .select(
@@ -240,70 +262,168 @@ async function searchTracksInDb(
     )
     .ilike("search_text", `%${query}%`)
     .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(40);
+    .limit(20);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return dedupeTracks((data ?? []) as TrackRow[]);
+  return dedupeTracks((data ?? []) as TrackRow[]) as EnrichedTrackRow[];
 }
 
-async function saveSpotifyTracksToDb(
-  tracks: SpotifySearchTrack[]
+async function enrichTracksMissingImages(
+  tracks: EnrichedTrackRow[]
 ): Promise<EnrichedTrackRow[]> {
-  if (tracks.length === 0) return [];
+  const tracksToEnrich = tracks
+    .filter((track) => !track.image_url && track.spotify_track_id)
+    .slice(0, 6);
 
-  const supabaseAdmin = createSupabaseAdminClient();
+  if (tracksToEnrich.length === 0) {
+    return tracks;
+  }
 
-  const rowsToInsert = tracks.map((track) => ({
-    spotify_track_id: track.spotify_track_id,
-    track_name: track.track_name,
-    artist: track.artist,
-    album_name: track.album_name,
-    popularity: track.popularity,
-    duration_ms: track.duration_ms,
-    image_url: track.image_url,
-    spotify_url: track.spotify_url,
-    dedupe_key: buildDedupeKey(track.track_name, track.artist),
-    search_text: `${track.track_name} ${track.artist} ${
-      track.album_name ?? ""
-    }`.toLowerCase(),
-  }));
+  if (isSpotifyCooldownActive()) {
+    return tracks;
+  }
 
-  const { error: upsertError } = await supabaseAdmin.from("tracks").upsert(
-    rowsToInsert,
-    {
+  try {
+    const token = await getSpotifyAccessToken();
+
+    const results = await Promise.allSettled(
+      tracksToEnrich.map(async (track) => {
+        const response = await fetch(
+          `https://api.spotify.com/v1/tracks/${track.spotify_track_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (response.status === 429) {
+          const retryAfter = Number(response.headers.get("Retry-After") ?? "10");
+          setSpotifyCooldown(retryAfter);
+          return null;
+        }
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = (await response.json()) as SpotifyTrackDetailsResponse;
+
+        return {
+          spotify_track_id: track.spotify_track_id as string,
+          image_url: data.album?.images?.[0]?.url ?? null,
+          spotify_url: data.external_urls?.spotify ?? null,
+        };
+      })
+    );
+
+    const enrichMap = new Map<
+      string,
+      { image_url: string | null; spotify_url: string | null }
+    >();
+
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value?.spotify_track_id) {
+        enrichMap.set(result.value.spotify_track_id, {
+          image_url: result.value.image_url ?? null,
+          spotify_url: result.value.spotify_url ?? null,
+        });
+      }
+    }
+
+    if (enrichMap.size === 0) {
+      return tracks;
+    }
+
+    const updatedTracks = tracks.map((track) => {
+      if (!track.spotify_track_id) return track;
+
+      const enriched = enrichMap.get(track.spotify_track_id);
+      if (!enriched) return track;
+
+      return {
+        ...track,
+        image_url: enriched.image_url ?? track.image_url,
+        spotify_url: enriched.spotify_url ?? track.spotify_url,
+      };
+    });
+
+    const rowsToPersist = updatedTracks
+      .filter(
+        (track) =>
+          track.spotify_track_id &&
+          enrichMap.has(track.spotify_track_id) &&
+          (track.image_url || track.spotify_url)
+      )
+      .map((track) => ({
+        spotify_track_id: track.spotify_track_id as string,
+        image_url: track.image_url,
+        spotify_url: track.spotify_url,
+      }));
+
+    if (rowsToPersist.length > 0) {
+      const supabaseAdmin = createSupabaseAdminClient();
+
+      Promise.allSettled(
+        rowsToPersist.map((row) =>
+          supabaseAdmin
+            .from("tracks")
+            .update({
+              image_url: row.image_url,
+              spotify_url: row.spotify_url,
+            })
+            .eq("spotify_track_id", row.spotify_track_id)
+        )
+      ).catch((error) => {
+        console.error("Persist enriched track images failed:", error);
+      });
+    }
+
+    return updatedTracks;
+  } catch (error) {
+    console.error("Enrich tracks missing images failed:", error);
+    return tracks;
+  }
+}
+
+async function saveSpotifyTracksToDb(tracks: SpotifySearchTrack[]) {
+  if (tracks.length === 0) return;
+
+  try {
+    const supabaseAdmin = createSupabaseAdminClient();
+
+    const rowsToInsert = tracks
+      .filter((track) => track.spotify_track_id)
+      .map((track) => ({
+        spotify_track_id: track.spotify_track_id,
+        track_name: track.track_name,
+        artist: track.artist,
+        album_name: track.album_name,
+        popularity: track.popularity,
+        duration_ms: track.duration_ms,
+        image_url: track.image_url,
+        spotify_url: track.spotify_url,
+        dedupe_key: buildDedupeKey(track.track_name, track.artist),
+        search_text: `${track.track_name} ${track.artist} ${track.album_name ?? ""}`.toLowerCase(),
+      }));
+
+    if (rowsToInsert.length === 0) return;
+
+    const { error } = await supabaseAdmin.from("tracks").upsert(rowsToInsert, {
       onConflict: "spotify_track_id",
       ignoreDuplicates: false,
+    });
+
+    if (error) {
+      console.error("SAVE SPOTIFY TRACKS ERROR:", error);
     }
-  );
-  console.log("ROWS TO INSERT:", rowsToInsert.length);
-  if (upsertError) {
-    console.error("SAVE SPOTIFY TRACKS ERROR:", upsertError);
-    return [];
+  } catch (error) {
+    console.error("SAVE SPOTIFY TRACKS ERROR:", error);
   }
-
-  const spotifyIds = tracks
-    .map((track) => track.spotify_track_id)
-    .filter((id): id is string => Boolean(id));
-
-  if (spotifyIds.length === 0) return [];
-
-  const { data, error: fetchError } = await supabaseAdmin
-    .from("tracks")
-    .select(
-      "id, spotify_track_id, track_name, artist, album_name, popularity, duration_ms, image_url, spotify_url, dedupe_key"
-    )
-    .in("spotify_track_id", spotifyIds)
-    .order("popularity", { ascending: false, nullsFirst: false });
-
-  if (fetchError) {
-    console.error("FETCH SAVED SPOTIFY TRACKS ERROR:", fetchError);
-    return [];
-  }
-
-  return dedupeTracks((data ?? []) as TrackRow[]);
 }
 
 export async function GET(request: Request) {
@@ -312,7 +432,7 @@ export async function GET(request: Request) {
     const rawQ = searchParams.get("q");
     const sessionId = searchParams.get("sessionId");
 
-    const q = rawQ?.trim() ?? "";
+    const q = rawQ?.trim().toLowerCase() ?? "";
 
     if (q.length < 2) {
       return NextResponse.json({
@@ -338,7 +458,7 @@ export async function GET(request: Request) {
       .eq("id", sessionId)
       .single();
 
-    const dbTracksPromise = searchTracksInDb(supabase, q.toLowerCase());
+    const dbTracksPromise = searchTracksInDb(supabase, q);
 
     const [
       { data: sessionData, error: sessionError },
@@ -353,50 +473,18 @@ export async function GET(request: Request) {
     }
 
     const session = sessionData as SessionRow;
-    let finalTracks = dbTracks;
 
-    if (finalTracks.length === 0) {
-      try {
-        const spotifyTracks = await searchSpotifyTracks(q);
-        console.log("SPOTIFY TRACKS FOUND:", spotifyTracks.length);
+    let finalTracks: Array<EnrichedTrackRow | SpotifySearchTrack> = dbTracks;
 
-        if (spotifyTracks.length > 0) {
-          const savedTracks = await saveSpotifyTracksToDb(spotifyTracks);
-          console.log("SPOTIFY TRACKS SAVED:", savedTracks.length);
-          finalTracks = savedTracks;
-        }
-      } catch (spotifyError) {
-        console.error("SPOTIFY FALLBACK ERROR:", spotifyError);
-      }
-    }
+    if (dbTracks.length > 0) {
+      finalTracks = await enrichTracksMissingImages(dbTracks);
+    } else {
+      const spotifyTracks = await searchSpotifyTracks(q);
+      finalTracks = spotifyTracks;
 
-    const missingCoverTracks = finalTracks.filter(
-      (track) => !track.image_url && track.spotify_track_id
-    );
-
-    if (missingCoverTracks.length > 0) {
-      const enrichResults = await Promise.allSettled(
-        missingCoverTracks.map((track) => enrichTrackImageById(track.id))
-      );
-
-      const enrichMap = new Map<string, EnrichResponse>();
-
-      missingCoverTracks.forEach((track, index) => {
-        const result = enrichResults[index];
-
-        if (result.status === "fulfilled" && result.value) {
-          enrichMap.set(track.id, result.value);
-        }
+      saveSpotifyTracksToDb(spotifyTracks).catch((error) => {
+        console.error("SAVE SPOTIFY TRACKS ERROR:", error);
       });
-
-      for (const track of finalTracks) {
-        const enriched = enrichMap.get(track.id);
-
-        if (enriched) {
-          track.image_url = enriched.image_url ?? track.image_url;
-          track.spotify_url = enriched.spotify_url ?? track.spotify_url;
-        }
-      }
     }
 
     return NextResponse.json(

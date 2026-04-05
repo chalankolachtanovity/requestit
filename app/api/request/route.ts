@@ -19,12 +19,29 @@ type TrackLookupRow = {
   id: string;
 };
 
+type TrackInsertRow = {
+  id: string;
+};
+
 function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for");
   if (!forwarded) return "unknown";
 
   const firstIp = forwarded.split(",")[0]?.trim();
   return firstIp || "unknown";
+}
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function buildDedupeKey(trackName: string, artist: string) {
+  return `${normalizeText(trackName)}|${normalizeText(artist)}`;
+}
+
+function isRealDbTrackId(trackId?: string | null) {
+  if (!trackId) return false;
+  return !trackId.startsWith("spotify:");
 }
 
 export async function POST(request: Request) {
@@ -34,12 +51,24 @@ export async function POST(request: Request) {
     const {
       sessionId,
       trackId,
+      spotifyTrackId,
+      trackName,
+      artist,
+      albumName,
+      imageUrl,
+      spotifyUrl,
       type,
       customTrackName,
       customArtistName,
     } = body as {
       sessionId?: string;
       trackId?: string | null;
+      spotifyTrackId?: string | null;
+      trackName?: string | null;
+      artist?: string | null;
+      albumName?: string | null;
+      imageUrl?: string | null;
+      spotifyUrl?: string | null;
       type?: "free" | "paid";
       customTrackName?: string;
       customArtistName?: string;
@@ -48,10 +77,20 @@ export async function POST(request: Request) {
     const trimmedCustomTrackName = customTrackName?.trim() || "";
     const trimmedCustomArtistName = customArtistName?.trim() || "";
 
+    const trimmedTrackName = trackName?.trim() || "";
+    const trimmedArtist = artist?.trim() || "";
+    const trimmedAlbumName = albumName?.trim() || "";
+
     const hasCustomSong =
       trimmedCustomTrackName.length > 0 && trimmedCustomArtistName.length > 0;
 
-    if (!sessionId || !type || (!trackId && !hasCustomSong)) {
+    const hasSpotifyTrack =
+      !!spotifyTrackId && trimmedTrackName.length > 0 && trimmedArtist.length > 0;
+
+    const hasAnyTrackReference =
+      isRealDbTrackId(trackId) || !!spotifyTrackId || hasCustomSong;
+
+    if (!sessionId || !type || !hasAnyTrackReference) {
       return NextResponse.json(
         { error: "Chýbajú povinné údaje." },
         { status: 400 }
@@ -134,11 +173,11 @@ export async function POST(request: Request) {
       const now = Date.now();
       const diffSeconds = (now - lastTime) / 1000;
 
-      if (diffSeconds < 15) {
+      if (diffSeconds < 10) {
         return NextResponse.json(
           {
             error: `Počkaj ${Math.ceil(
-              15 - diffSeconds
+              10 - diffSeconds
             )} sekúnd pred ďalším requestom.`,
           },
           { status: 429 }
@@ -148,9 +187,8 @@ export async function POST(request: Request) {
 
     let resolvedTrackId: string | null = null;
 
-    if (trackId) {
-      console.log("REQUEST TRACK ID RECEIVED:", trackId);
-
+    // 1. Ak prišiel normálny DB track id
+    if (isRealDbTrackId(trackId)) {
       const { data: trackById, error: trackByIdError } = await supabaseAdmin
         .from("tracks")
         .select("id")
@@ -165,34 +203,90 @@ export async function POST(request: Request) {
         );
       }
 
-      if (trackById) {
-        resolvedTrackId = (trackById as TrackLookupRow).id;
-      } else {
-        const { data: trackBySpotifyId, error: trackBySpotifyIdError } =
-          await supabaseAdmin
-            .from("tracks")
-            .select("id")
-            .eq("spotify_track_id", trackId)
-            .maybeSingle();
+      if (!trackById) {
+        return NextResponse.json(
+          { error: "Track sa nenašiel v databáze." },
+          { status: 400 }
+        );
+      }
 
-        if (trackBySpotifyIdError) {
-          console.error(
-            "TRACK LOOKUP BY SPOTIFY ID ERROR:",
-            trackBySpotifyIdError
-          );
+      resolvedTrackId = (trackById as TrackLookupRow).id;
+    }
+
+    // 2. Ak nemáme DB id, ale máme spotify track
+    if (!resolvedTrackId && spotifyTrackId) {
+      const { data: trackBySpotifyId, error: trackBySpotifyIdError } =
+        await supabaseAdmin
+          .from("tracks")
+          .select("id")
+          .eq("spotify_track_id", spotifyTrackId)
+          .maybeSingle();
+
+      if (trackBySpotifyIdError) {
+        console.error(
+          "TRACK LOOKUP BY SPOTIFY ID ERROR:",
+          trackBySpotifyIdError
+        );
+        return NextResponse.json(
+          { error: "Nepodarilo sa overiť Spotify track." },
+          { status: 500 }
+        );
+      }
+
+      if (trackBySpotifyId) {
+        resolvedTrackId = (trackBySpotifyId as TrackLookupRow).id;
+      } else {
+        if (!hasSpotifyTrack) {
           return NextResponse.json(
-            { error: "Nepodarilo sa overiť Spotify track." },
-            { status: 500 }
+            { error: "Chýbajú údaje o Spotify tracku." },
+            { status: 400 }
           );
         }
 
-        if (trackBySpotifyId) {
-          resolvedTrackId = (trackBySpotifyId as TrackLookupRow).id;
+        const dedupeKey = buildDedupeKey(trimmedTrackName, trimmedArtist);
+        const searchText = `${trimmedTrackName} ${trimmedArtist} ${trimmedAlbumName}`.toLowerCase();
+
+        const { data: insertedTrack, error: insertTrackError } =
+          await supabaseAdmin
+            .from("tracks")
+            .insert({
+              spotify_track_id: spotifyTrackId,
+              track_name: trimmedTrackName,
+              artist: trimmedArtist,
+              album_name: trimmedAlbumName || null,
+              image_url: imageUrl || null,
+              spotify_url: spotifyUrl || null,
+              dedupe_key: dedupeKey,
+              search_text: searchText,
+            })
+            .select("id")
+            .single();
+
+        if (insertTrackError || !insertedTrack) {
+          console.error("TRACK INSERT ERROR:", insertTrackError);
+
+          // fallback ak sa insert nepodarí napr. kvôli race condition / unique constraint
+          const { data: retryTrack, error: retryTrackError } = await supabaseAdmin
+            .from("tracks")
+            .select("id")
+            .eq("spotify_track_id", spotifyTrackId)
+            .maybeSingle();
+
+          if (retryTrackError || !retryTrack) {
+            return NextResponse.json(
+              {
+                error:
+                  insertTrackError?.message ||
+                  retryTrackError?.message ||
+                  "Nepodarilo sa uložiť track.",
+              },
+              { status: 500 }
+            );
+          }
+
+          resolvedTrackId = (retryTrack as TrackLookupRow).id;
         } else {
-          return NextResponse.json(
-            { error: "Track sa nenašiel v databáze tracks." },
-            { status: 400 }
-          );
+          resolvedTrackId = (insertedTrack as TrackInsertRow).id;
         }
       }
     }
@@ -221,7 +315,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!trackId && hasCustomSong) {
+    if (!resolvedTrackId && hasCustomSong) {
       supabase
         .from("custom_tracks")
         .insert({

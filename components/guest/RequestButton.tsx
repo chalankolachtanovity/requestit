@@ -8,6 +8,12 @@ type SessionMode = "classic" | "most_requested";
 type RequestButtonProps = {
   sessionId: string;
   trackId: string | null;
+  spotifyTrackId?: string | null;
+  trackName?: string | null;
+  artist?: string | null;
+  albumName?: string | null;
+  imageUrl?: string | null;
+  spotifyUrl?: string | null;
   minPriorityAmountCents: number;
   mode?: SessionMode;
   customMode?: boolean;
@@ -21,6 +27,12 @@ type RequestButtonProps = {
 export default function RequestButton({
   sessionId,
   trackId,
+  spotifyTrackId = null,
+  trackName = null,
+  artist = null,
+  albumName = null,
+  imageUrl = null,
+  spotifyUrl = null,
   minPriorityAmountCents,
   mode = "classic",
   customMode = false,
@@ -61,6 +73,29 @@ export default function RequestButton({
     }
   };
 
+  const getSafeTrackId = () => {
+    if (!trackId) return null;
+    if (String(trackId).startsWith("spotify:")) return null;
+    return trackId;
+  };
+
+  const buildTrackPayload = () => {
+    const safeTrackId = getSafeTrackId();
+
+    return {
+      sessionId,
+      trackId: safeTrackId,
+      spotifyTrackId,
+      trackName: customMode ? undefined : trackName,
+      artist: customMode ? undefined : artist,
+      albumName: customMode ? undefined : albumName,
+      imageUrl: customMode ? undefined : imageUrl,
+      spotifyUrl: customMode ? undefined : spotifyUrl,
+      customTrackName: customMode ? customTrackName.trim() : undefined,
+      customArtistName: customMode ? customArtistName.trim() : undefined,
+    };
+  };
+
   const handleFreeRequest = async () => {
     if (!allowFreeRequests) {
       throw new Error("Bezplatné requesty sú momentálne vypnuté.");
@@ -68,27 +103,19 @@ export default function RequestButton({
 
     validateCustomSong();
 
-    console.log("REQUESTBUTTON trackId prop:", trackId);
-    console.log("REQUESTBUTTON body:", {
-      sessionId,
-      trackId,
+    const payload = {
+      ...buildTrackPayload(),
       type: "free",
-      customTrackName,
-      customArtistName,
-    });
+    };
+
+    console.log("REQUESTBUTTON payload:", payload);
 
     const response = await fetch("/api/request", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        sessionId,
-        trackId,
-        type: "free",
-        customTrackName: customMode ? customTrackName : undefined,
-        customArtistName: customMode ? customArtistName : undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
@@ -133,18 +160,19 @@ export default function RequestButton({
       );
     }
 
+    const payload = {
+      ...buildTrackPayload(),
+      amountCents,
+    };
+
+    console.log("REQUESTBUTTON paid payload:", payload);
+
     const response = await fetch("/api/create-checkout-session", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        sessionId,
-        trackId,
-        amountCents,
-        customTrackName: customMode ? customTrackName : undefined,
-        customArtistName: customMode ? customArtistName : undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
@@ -219,10 +247,10 @@ export default function RequestButton({
                 onClick={() => handleRequest("free")}
                 disabled={loadingType !== null}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition disabled:opacity-50 ${
-                isMostRequestedMode
-                  ? "border border-cyan-300/20 bg-cyan-400/12 text-cyan-200 hover:bg-cyan-400/18"
-                  : "border border-white/15 text-white hover:bg-white/[0.05]"
-              }`}
+                  isMostRequestedMode
+                    ? "border border-cyan-300/20 bg-cyan-400/12 text-cyan-200 hover:bg-cyan-400/18"
+                    : "border border-white/15 text-white hover:bg-white/[0.05]"
+                }`}
               >
                 {loadingType === "free"
                   ? isMostRequestedMode
