@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Download, ExternalLink } from "lucide-react";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -24,10 +25,22 @@ function getModeLabel(mode: SessionMode) {
 
 function getModeBadgeClasses(mode: SessionMode) {
   if (mode === "most_requested") {
-    return "bg-cyan-400/15 text-cyan-200 border border-cyan-300/20";
+    return "border border-cyan-300/20 bg-cyan-400/10 text-cyan-200";
   }
 
-  return "bg-violet-400/15 text-violet-200 border border-violet-300/20";
+  return "border border-violet-300/20 bg-violet-400/10 text-violet-200";
+}
+
+function formatSessionDate(value: string | null) {
+  if (!value) return null;
+
+  return new Date(value).toLocaleString("sk-SK", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function SessionCard({
@@ -38,7 +51,6 @@ export default function SessionCard({
   onChange: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [showQr, setShowQr] = useState(false);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const guestUrl = `${appUrl}/${session.slug}`;
@@ -94,153 +106,132 @@ export default function SessionCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#181818] shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition hover:bg-[#1d1d1d]">
-      <div className="bg-gradient-to-br from-white/[0.08] via-transparent to-transparent p-5 md:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#141414] shadow-[0_10px_28px_rgba(0,0,0,0.2)] transition hover:bg-[#171717]">
+      <div className="p-4 md:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0 flex-1">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#232323] text-2xl shadow-inner">
+            <div className="mb-3 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.04] text-lg">
                 🎧
               </div>
 
-              <div className="min-w-0">
-                <h3 className="truncate text-2xl font-bold text-white">
-                  {session.name || "Unnamed Event"}
-                </h3>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-[28px] font-semibold leading-none tracking-tight text-white">
+                    {session.name || "Unnamed Event"}
+                  </h3>
 
-                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                       session.is_active
                         ? "bg-green-400 text-black"
-                        : "bg-white/10 text-white/60"
+                        : "bg-white/8 text-white/55"
                     }`}
                   >
                     {session.is_active ? "LIVE" : "ENDED"}
                   </span>
 
                   <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getModeBadgeClasses(
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${getModeBadgeClasses(
                       session.mode
                     )}`}
                   >
                     {getModeLabel(session.mode)}
                   </span>
+                </div>
 
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/38">
+                  
                   {session.starts_at ? (
-                    <span className="text-xs text-white/45">
-                      {new Date(session.starts_at).toLocaleString("sk-SK")}
-                    </span>
+                    <>
+                      
+                      <span>{formatSessionDate(session.starts_at)}</span>
+                    </>
                   ) : null}
                 </div>
               </div>
             </div>
 
-            <div className="mb-5 flex flex-wrap gap-2">
-              {session.mode === "most_requested" ? (
-                <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-cyan-200">
-                  Most requested mode
+            <div className="mb-4 flex flex-wrap gap-2">
+              {session.mode !== "most_requested" ? (
+                <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs text-white/72">
+                  Min {(session.min_priority_amount_cents / 100).toFixed(2)} €
                 </span>
-              ) : (
-                <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
-                  Minimum {(session.min_priority_amount_cents / 100).toFixed(2)} €
-                </span>
-              )}
+              ) : null}
 
-              <span className="rounded-full bg-[#232323] px-3 py-1 text-xs text-white/70">
-                Free {session.allow_free_requests ? "on" : "off"}
+              <span
+                className={`rounded-full px-3 py-1 text-xs ${
+                  session.allow_free_requests
+                    ? "bg-emerald-400/10 text-emerald-200"
+                    : "bg-white/[0.05] text-white/42"
+                }`}
+              >
+                Free {session.allow_free_requests ? "enabled" : "disabled"}
               </span>
 
               <span
-                className={`rounded-full bg-[#232323] px-3 py-1 text-xs ${
+                className={`rounded-full px-3 py-1 text-xs ${
                   session.allow_paid_requests
-                    ? "text-white/70"
-                    : session.mode === "most_requested"
-                    ? "text-cyan-200"
-                    : "text-white/50"
+                    ? "bg-amber-400/10 text-amber-200"
+                    : "bg-white/[0.05] text-white/42"
                 }`}
               >
-                Paid {session.allow_paid_requests ? "on" : "off"}
+                Paid {session.allow_paid_requests ? "enabled" : "disabled"}
               </span>
             </div>
 
-            <div className="mb-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href={`/dashboard/admin/session/${session.id}`}
-                className="inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
+                className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02] hover:opacity-95"
               >
                 {session.mode === "most_requested"
                   ? "Open Most Requested"
                   : "Open Queue"}
               </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/dashboard/admin/session/${session.id}/settings`}
-                className="rounded-full bg-[#232323] px-4 py-2 text-sm text-white/80 transition hover:bg-[#2b2b2b]"
-              >
-                Settings
-              </Link>
-
-              <a
-                href={`/${session.slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full bg-[#232323] px-4 py-2 text-sm text-white/80 transition hover:bg-[#2b2b2b]"
-              >
-                Open Guest Page
-              </a>
-
-              <button
-                onClick={() => setShowQr((prev) => !prev)}
-                className="rounded-full bg-[#232323] px-4 py-2 text-sm text-white/80 transition hover:bg-[#2b2b2b]"
-              >
-                {showQr ? "Hide QR" : "Show QR"}
-              </button>
-
-              <button
-                onClick={handleDownloadQr}
-                className="rounded-full bg-[#232323] px-4 py-2 text-sm text-white/80 transition hover:bg-[#2b2b2b]"
-              >
-                Download QR
-              </button>
 
               {session.is_active ? (
                 <button
                   onClick={handleEnd}
                   disabled={loading}
-                  className="rounded-full bg-[#232323] px-4 py-2 text-sm text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                  className="inline-flex items-center rounded-full text-sm font-medium text-red-300/85 transition hover:text-red-200 disabled:opacity-50"
                 >
-                  {loading ? "Ending..." : "End"}
+                  {loading ? "Ending..." : "End Session"}
                 </button>
               ) : null}
             </div>
           </div>
 
-          <div className="w-full xl:w-[240px]">
-            <div className="rounded-3xl bg-[#121212] p-4">
-              {!showQr ? (
-                <div className="flex h-[190px] flex-col items-center justify-center rounded-2xl bg-[#1f1f1f] text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#2a2a2a] text-xl">
-                    ♪
-                  </div>
-                  <p className="text-sm font-medium text-white/85">
-                    Guest access ready
-                  </p>
-                  <p className="mt-1 text-xs text-white/40">
-                    Show or download QR code
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-2xl bg-white p-3">
-                  <img
-                    src={qrUrl}
-                    alt="Session QR code"
-                    className="h-full w-full rounded-xl"
-                  />
-                </div>
-              )}
+          <div className="w-full xl:w-[172px]">
+            <div className="p-1">
+              <div className="rounded-[18px] bg-white p-2.5">
+                <img
+                  src={qrUrl}
+                  alt="Session QR code"
+                  className="h-full w-full rounded-xl"
+                />
+              </div>
+
+              <div className="mt-2 flex items-center gap-2">
+                <a
+                  href={`/${session.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full bg-white/[0.03] px-3 py-2 text-xs text-white/40 transition hover:bg-white/[0.06] hover:text-white/75"
+                >
+                  <span className="truncate">{guestUrl}</span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                </a>
+
+                <button
+                  onClick={handleDownloadQr}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.03] text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                  aria-label="Download QR"
+                  title="Download QR"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

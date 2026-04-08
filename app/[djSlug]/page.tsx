@@ -62,7 +62,7 @@ export default async function DjPage({ params }: PageProps) {
             />
             <span>
               {sessionMode === "most_requested"
-                ? "Nemšová"
+                ? "Most requested"
                 : "Live song requests"}
             </span>
           </div>
