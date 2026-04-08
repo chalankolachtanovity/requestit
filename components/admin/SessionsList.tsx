@@ -113,7 +113,6 @@ export default function SessionsList() {
             <p className="text-sm uppercase tracking-[0.2em] text-white/35">
               Events
             </p>
-            <h2 className="mt-1 text-2xl font-bold text-white">Your Events</h2>
           </div>
 
           <button
@@ -132,7 +131,7 @@ export default function SessionsList() {
           <div className="space-y-8">
             <div>
               <h3 className="mb-3 text-lg font-semibold text-white">
-                Active Events
+                Active
               </h3>
               {activeSessions.length === 0 ? (
                 <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-white/40">
@@ -152,8 +151,8 @@ export default function SessionsList() {
             </div>
 
             <div>
-              <h3 className="mb-3 text-lg font-semibold text-white/85">
-                Past Events
+              <h3 className="mb-3 text-lg font-semibold text-white/75">
+                Past
               </h3>
               {endedSessions.length === 0 ? (
                 <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-white/40">

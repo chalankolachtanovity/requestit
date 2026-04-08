@@ -28,10 +28,7 @@ export default async function DashboardPage() {
                 priority
                 className="h-16 w-auto"
               />
-            <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-              
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">Events</h1>
+
           </div>
 
           <DashboardTopRight />

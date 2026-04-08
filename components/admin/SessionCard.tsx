@@ -186,7 +186,7 @@ export default function SessionCard({
                 className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02] hover:opacity-95"
               >
                 {session.mode === "most_requested"
-                  ? "Open Most Requested"
+                  ? "Open Queue"
                   : "Open Queue"}
               </Link>
 
