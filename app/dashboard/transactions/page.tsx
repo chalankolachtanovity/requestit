@@ -1,10 +1,12 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import SessionsList from "@/components/admin/SessionsList";
 import DashboardTopRight from "@/components/admin/DashboardTopRight";
 import DashboardSubnav from "@/components/admin/DashboardSubnav";
 import TransactionsList from "@/components/admin/TransactionsList";
 
-export default async function DashboardTransactionsPage() {
+export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -19,11 +21,15 @@ export default async function DashboardTransactionsPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-              DJ Dashboard
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">Transactions</h1>
-            <p className="mt-2 text-white/55">{user.email}</p>
+              <Image
+                src="/black/logo_black.png"
+                alt="Requestit"
+                width={150}
+                height={36}
+                priority
+                className="h-16 w-auto"
+              />
+
           </div>
 
           <DashboardTopRight />

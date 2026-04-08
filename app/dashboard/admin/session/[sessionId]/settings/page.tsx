@@ -1,7 +1,9 @@
+import Image from "next/image";
 import { redirect, notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import SessionSettingsPanel from "@/components/admin/SessionSettingsPanel";
 import SessionSubnav from "@/components/admin/SessionSubnav";
+import DashboardTopRight from "@/components/admin/DashboardTopRight";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -45,7 +47,24 @@ export default async function AdminSessionSettingsPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SessionSubnav sessionId={sessionId} />
+      <div className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-start justify-between gap-4 px-4 py-3">
+          <Image
+            src="/black/logo_black.png"
+            alt="Requestit"
+            width={130}
+            height={30}
+            priority
+            className="h-14 w-auto"
+          />
+
+          <DashboardTopRight showBackToDashboard showCredits={false} />
+        </div>
+
+        <div className="mx-auto max-w-5xl px-4 pb-3">
+          <SessionSubnav sessionId={sessionId} />
+        </div>
+      </div>
 
       <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-6 flex items-start justify-between gap-4">
