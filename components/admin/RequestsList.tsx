@@ -1,44 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type {
+  ClassicRequestsData,
+  MostRequestedItem,
+  RequestItem,
+} from "@/lib/dashboard-data";
 
 type SessionMode = "classic" | "most_requested";
-
-type RequestItem = {
-  id: string;
-  status: string;
-  type: "free" | "paid";
-  created_at: string;
-  amount_cents: number | null;
-  custom_track_name: string | null;
-  custom_artist_name: string | null;
-  tracks: {
-    track_name: string;
-    artist: string;
-    image_url?: string | null;
-    spotify_url?: string | null;
-  } | null;
-};
-
-type ClassicApiResponse = {
-  incomingPaidRequests: RequestItem[];
-  incomingFreeRequests: RequestItem[];
-  toBePlayedPaidRequests: RequestItem[];
-  toBePlayedFreeRequests: RequestItem[];
-};
-
-type MostRequestedItem = {
-  track_id: string | null;
-  custom_track_name: string | null;
-  custom_artist_name: string | null;
-  track_name: string;
-  artist: string;
-  image_url: string | null;
-  spotify_url: string | null;
-  request_count: number;
-  last_requested_at: string;
-};
 
 type MostRequestedApiResponse = {
   mode: "most_requested";
@@ -64,7 +42,7 @@ function AmountBadge({ amountCents }: { amountCents: number | null }) {
 
   return (
     <span className="rounded-full border border-green-300/30 bg-green-400/15 px-2.5 py-0.5 text-[11px] font-bold text-green-200">
-      {(amountCents / 100).toFixed(2)} €
+      {(amountCents / 100).toFixed(2)} EUR
     </span>
   );
 }
@@ -78,15 +56,27 @@ function CoverImage({
   alt: string;
   size?: "sm" | "md";
 }) {
-  const classes = size === "sm" ? "h-10 w-10 rounded-md" : "h-12 w-12 rounded-lg";
+  const dimensions =
+    size === "sm"
+      ? { width: 40, height: 40, radius: "rounded-md" }
+      : { width: 48, height: 48, radius: "rounded-lg" };
 
   return (
-    <div className={`flex-shrink-0 overflow-hidden bg-white/5 ${classes}`}>
+    <div
+      className={`relative flex-shrink-0 overflow-hidden bg-white/5 ${dimensions.radius}`}
+      style={{ width: dimensions.width, height: dimensions.height }}
+    >
       {imageUrl ? (
-        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+        <Image
+          src={imageUrl}
+          alt={alt}
+          fill
+          sizes={size === "sm" ? "40px" : "48px"}
+          className="object-cover"
+        />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-white/28">
-          <span className={size === "sm" ? "text-sm" : "text-base"}>♫</span>
+          <span className={size === "sm" ? "text-sm" : "text-base"}>♪</span>
         </div>
       )}
     </div>
@@ -130,7 +120,7 @@ function PlaylistRow({
                 isPaid ? "text-green-50" : "text-white"
               }`}
             >
-              {req.tracks?.track_name ?? req.custom_track_name ?? "Neznáma pesnička"}
+              {req.tracks?.track_name ?? req.custom_track_name ?? "Unknown track"}
             </p>
 
             <TypeBadge type={req.type} />
@@ -138,7 +128,7 @@ function PlaylistRow({
           </div>
 
           <p className="truncate text-xs text-white/50">
-            {req.tracks?.artist ?? req.custom_artist_name ?? "Neznámy interpret"}
+            {req.tracks?.artist ?? req.custom_artist_name ?? "Unknown artist"}
           </p>
         </div>
       </div>
@@ -199,11 +189,11 @@ function IncomingRow({
                 isPaid ? "text-green-50" : "text-white"
               }`}
             >
-              {req.tracks?.track_name ?? req.custom_track_name ?? "Neznáma pesnička"}
+              {req.tracks?.track_name ?? req.custom_track_name ?? "Unknown track"}
             </h3>
 
             <p className="truncate text-sm text-white/55">
-              {req.tracks?.artist ?? req.custom_artist_name ?? "Neznámy interpret"}
+              {req.tracks?.artist ?? req.custom_artist_name ?? "Unknown artist"}
             </p>
           </div>
         </div>
@@ -273,7 +263,6 @@ function MostRequestedRow({
   updatingId: string | null;
   onPlayed: (item: MostRequestedItem) => void;
 }) {
-  
   const rowId =
     item.track_id ||
     `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`;
@@ -284,11 +273,7 @@ function MostRequestedRow({
         {index + 1}
       </div>
 
-      <CoverImage
-        imageUrl={item.image_url}
-        alt={`${item.track_name} cover`}
-        size="md"
-      />
+      <CoverImage imageUrl={item.image_url} alt={`${item.track_name} cover`} size="md" />
 
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-base font-semibold text-white">
@@ -315,23 +300,150 @@ function MostRequestedRow({
 export default function RequestsList({
   sessionId,
   mode,
+  initialClassicData,
+  initialMostRequested,
 }: {
   sessionId: string;
   mode: SessionMode;
+  initialClassicData?: ClassicRequestsData;
+  initialMostRequested?: MostRequestedItem[];
 }) {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const isMostRequestedMode = mode === "most_requested";
+  const hasInitialData = isMostRequestedMode
+    ? initialMostRequested !== undefined
+    : initialClassicData !== undefined;
 
-  const [incomingPaidRequests, setIncomingPaidRequests] = useState<RequestItem[]>([]);
-  const [incomingFreeRequests, setIncomingFreeRequests] = useState<RequestItem[]>([]);
-  const [toBePlayedPaidRequests, setToBePlayedPaidRequests] = useState<RequestItem[]>([]);
-  const [toBePlayedFreeRequests, setToBePlayedFreeRequests] = useState<RequestItem[]>([]);
-  const [mostRequested, setMostRequested] = useState<MostRequestedItem[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const [incomingPaidRequests, setIncomingPaidRequests] = useState<RequestItem[]>(
+    initialClassicData?.incomingPaidRequests ?? []
+  );
+  const [incomingFreeRequests, setIncomingFreeRequests] = useState<RequestItem[]>(
+    initialClassicData?.incomingFreeRequests ?? []
+  );
+  const [toBePlayedPaidRequests, setToBePlayedPaidRequests] = useState<RequestItem[]>(
+    initialClassicData?.toBePlayedPaidRequests ?? []
+  );
+  const [toBePlayedFreeRequests, setToBePlayedFreeRequests] = useState<RequestItem[]>(
+    initialClassicData?.toBePlayedFreeRequests ?? []
+  );
+  const [mostRequested, setMostRequested] = useState<MostRequestedItem[]>(
+    initialMostRequested ?? []
+  );
+  const [loading, setLoading] = useState(!hasInitialData);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const isMostRequestedMode = mode === "most_requested";
+  const refreshTimerRef = useRef<number | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
+
+  const applyClassicData = useCallback((data: ClassicRequestsData) => {
+    startTransition(() => {
+      setIncomingPaidRequests(data.incomingPaidRequests ?? []);
+      setIncomingFreeRequests(data.incomingFreeRequests ?? []);
+      setToBePlayedPaidRequests(data.toBePlayedPaidRequests ?? []);
+      setToBePlayedFreeRequests(data.toBePlayedFreeRequests ?? []);
+      setMostRequested([]);
+      setError("");
+      setLoading(false);
+    });
+  }, []);
+
+  const applyMostRequestedData = useCallback((items: MostRequestedItem[]) => {
+    startTransition(() => {
+      setMostRequested(items ?? []);
+      setIncomingPaidRequests([]);
+      setIncomingFreeRequests([]);
+      setToBePlayedPaidRequests([]);
+      setToBePlayedFreeRequests([]);
+      setError("");
+      setLoading(false);
+    });
+  }, []);
+
+  const runRefresh = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+
+    try {
+      if (isMostRequestedMode) {
+        const response = await fetch(
+          `/api/live-preview?sessionId=${encodeURIComponent(sessionId)}`,
+          { cache: "no-store" }
+        );
+        const data: MostRequestedApiResponse | { error: string } =
+          await response.json();
+
+        if (!response.ok || !("mode" in data) || data.mode !== "most_requested") {
+          startTransition(() => {
+            setError(
+              "error" in data ? data.error : "Could not load ranking."
+            );
+            setLoading(false);
+          });
+          return;
+        }
+
+        applyMostRequestedData(data.mostRequested ?? []);
+        return;
+      }
+
+      const response = await fetch(`/api/requests?sessionId=${sessionId}`);
+      const data: ClassicRequestsData | { error: string } = await response.json();
+
+      if (!response.ok || !("incomingPaidRequests" in data)) {
+        startTransition(() => {
+          setError(
+            "error" in data ? data.error : "Could not load requests."
+          );
+          setLoading(false);
+        });
+        return;
+      }
+
+      applyClassicData(data);
+    } catch (error) {
+      console.error("REQUESTS FETCH ERROR:", error);
+      startTransition(() => {
+        setError(
+          isMostRequestedMode
+            ? "Could not load ranking."
+            : "Could not load requests."
+        );
+        setLoading(false);
+      });
+    } finally {
+      refreshInFlightRef.current = false;
+
+      if (refreshQueuedRef.current) {
+        refreshQueuedRef.current = false;
+
+        if (refreshTimerRef.current !== null) {
+          window.clearTimeout(refreshTimerRef.current);
+        }
+
+        refreshTimerRef.current = window.setTimeout(() => {
+          refreshTimerRef.current = null;
+          void runRefresh();
+        }, 120);
+      }
+    }
+  }, [applyClassicData, applyMostRequestedData, isMostRequestedMode, sessionId]);
+
+  const scheduleRefresh = useCallback((delay = 120) => {
+    if (refreshTimerRef.current !== null) {
+      return;
+    }
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      void runRefresh();
+    }, delay);
+  }, [runRefresh]);
 
   const markMostRequestedPlayed = async (item: MostRequestedItem) => {
     try {
@@ -341,7 +453,7 @@ export default function RequestsList({
 
       setUpdatingId(rowId);
 
-      const res = await fetch("/api/request-status", {
+      const response = await fetch("/api/request-status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -355,82 +467,19 @@ export default function RequestsList({
         }),
       });
 
-      const data = await res.json();
+      const result = await response.json();
 
-      if (!res.ok) {
-        alert(data.error || "Nepodarilo sa označiť skladbu ako played.");
+      if (!response.ok) {
+        alert(result.error || "Could not mark track as played.");
         return;
       }
 
-      await fetchRequests();
-    } catch (err) {
-      console.error("MOST REQUESTED PLAYED ERROR:", err);
-      alert("Nepodarilo sa označiť skladbu ako played.");
+      scheduleRefresh(0);
+    } catch (error) {
+      console.error("MOST REQUESTED PLAYED ERROR:", error);
+      alert("Could not mark track as played.");
     } finally {
       setUpdatingId(null);
-    }
-  };
-
-  const toBePlayed = useMemo(
-    () => [...toBePlayedPaidRequests, ...toBePlayedFreeRequests],
-    [toBePlayedPaidRequests, toBePlayedFreeRequests]
-  );
-
-  const incoming = useMemo(
-    () => [...incomingPaidRequests, ...incomingFreeRequests],
-    [incomingPaidRequests, incomingFreeRequests]
-  );
-
-  const fetchRequests = async () => {
-    try {
-      setError("");
-
-      if (isMostRequestedMode) {
-        const res = await fetch(
-          `/api/live-preview?sessionId=${encodeURIComponent(sessionId)}`,
-          { cache: "no-store" }
-        );
-
-        const data: MostRequestedApiResponse | { error: string } = await res.json();
-
-        if (!res.ok || !("mode" in data) || data.mode !== "most_requested") {
-          setError("error" in data ? data.error : "Nepodarilo sa načítať rebríček.");
-          return;
-        }
-
-        setMostRequested(data.mostRequested ?? []);
-
-        setIncomingPaidRequests([]);
-        setIncomingFreeRequests([]);
-        setToBePlayedPaidRequests([]);
-        setToBePlayedFreeRequests([]);
-        return;
-      }
-
-      const res = await fetch(`/api/requests?sessionId=${sessionId}`);
-      const data: ClassicApiResponse | { error: string } = await res.json();
-
-      if (!res.ok || !("incomingPaidRequests" in data)) {
-        setError(
-          "error" in data ? data.error : "Nepodarilo sa načítať requesty."
-        );
-        return;
-      }
-
-      setIncomingPaidRequests(data.incomingPaidRequests ?? []);
-      setIncomingFreeRequests(data.incomingFreeRequests ?? []);
-      setToBePlayedPaidRequests(data.toBePlayedPaidRequests ?? []);
-      setToBePlayedFreeRequests(data.toBePlayedFreeRequests ?? []);
-      setMostRequested([]);
-    } catch (err) {
-      console.error("REQUESTS FETCH ERROR:", err);
-      setError(
-        isMostRequestedMode
-          ? "Nepodarilo sa načítať rebríček."
-          : "Nepodarilo sa načítať requesty."
-      );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -441,7 +490,7 @@ export default function RequestsList({
     try {
       setUpdatingId(requestId);
 
-      const res = await fetch("/api/request-status", {
+      const response = await fetch("/api/request-status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -452,17 +501,17 @@ export default function RequestsList({
         }),
       });
 
-      const data = await res.json();
+      const result = await response.json();
 
-      if (!res.ok) {
-        alert(data.error || "Nepodarilo sa zmeniť status.");
+      if (!response.ok) {
+        alert(result.error || "Could not update request status.");
         return;
       }
 
-      await fetchRequests();
-    } catch (err) {
-      console.error("REQUEST STATUS UPDATE ERROR:", err);
-      alert("Nepodarilo sa zmeniť status.");
+      scheduleRefresh(0);
+    } catch (error) {
+      console.error("REQUEST STATUS UPDATE ERROR:", error);
+      alert("Could not update request status.");
     } finally {
       setUpdatingId(null);
     }
@@ -472,7 +521,7 @@ export default function RequestsList({
     try {
       setUpdatingId(requestId);
 
-      const res = await fetch("/api/request-capture", {
+      const response = await fetch("/api/request-capture", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -480,17 +529,17 @@ export default function RequestsList({
         body: JSON.stringify({ requestId }),
       });
 
-      const data = await res.json();
+      const result = await response.json();
 
-      if (!res.ok) {
-        alert(data.error || "Nepodarilo sa strhnúť platbu.");
+      if (!response.ok) {
+        alert(result.error || "Could not capture payment.");
         return;
       }
 
-      await fetchRequests();
-    } catch (err) {
-      console.error("REQUEST CAPTURE ERROR:", err);
-      alert("Nepodarilo sa strhnúť platbu.");
+      scheduleRefresh(0);
+    } catch (error) {
+      console.error("REQUEST CAPTURE ERROR:", error);
+      alert("Could not capture payment.");
     } finally {
       setUpdatingId(null);
     }
@@ -500,7 +549,7 @@ export default function RequestsList({
     try {
       setUpdatingId(requestId);
 
-      const res = await fetch("/api/request-reject", {
+      const response = await fetch("/api/request-reject", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -508,25 +557,26 @@ export default function RequestsList({
         body: JSON.stringify({ requestId }),
       });
 
-      const data = await res.json();
+      const result = await response.json();
 
-      if (!res.ok) {
-        alert(data.error || "Nepodarilo sa zamietnuť request.");
+      if (!response.ok) {
+        alert(result.error || "Could not reject request.");
         return;
       }
 
-      await fetchRequests();
-    } catch (err) {
-      console.error("REQUEST REJECT ERROR:", err);
-      alert("Nepodarilo sa zamietnuť request.");
+      scheduleRefresh(0);
+    } catch (error) {
+      console.error("REQUEST REJECT ERROR:", error);
+      alert("Could not reject request.");
     } finally {
       setUpdatingId(null);
     }
   };
 
   useEffect(() => {
-    setLoading(true);
-    fetchRequests();
+    if (!hasInitialData) {
+      void runRefresh();
+    }
 
     const requestsChannel = supabase
       .channel(`requests-session-${sessionId}`)
@@ -539,7 +589,7 @@ export default function RequestsList({
           filter: `session_id=eq.${sessionId}`,
         },
         () => {
-          fetchRequests();
+          scheduleRefresh();
         }
       )
       .subscribe();
@@ -556,20 +606,34 @@ export default function RequestsList({
         },
         () => {
           if (!isMostRequestedMode) {
-            fetchRequests();
+            scheduleRefresh();
           }
         }
       )
       .subscribe();
 
     return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+
       supabase.removeChannel(requestsChannel);
       supabase.removeChannel(paymentAttemptsChannel);
     };
-  }, [sessionId, isMostRequestedMode]);
+  }, [hasInitialData, isMostRequestedMode, runRefresh, scheduleRefresh, sessionId, supabase]);
+
+  const toBePlayed = useMemo(
+    () => [...toBePlayedPaidRequests, ...toBePlayedFreeRequests],
+    [toBePlayedPaidRequests, toBePlayedFreeRequests]
+  );
+
+  const incoming = useMemo(
+    () => [...incomingPaidRequests, ...incomingFreeRequests],
+    [incomingPaidRequests, incomingFreeRequests]
+  );
 
   if (loading) {
-    return <p className="text-white/60">Načítavam...</p>;
+    return <p className="text-white/60">Loading...</p>;
   }
 
   if (error) {
@@ -593,22 +657,22 @@ export default function RequestsList({
 
           {mostRequested.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/45">
-              Zatiaľ tu nie sú žiadne requesty.
+              No requests yet.
             </div>
           ) : (
             <div className="space-y-3">
-          {mostRequested.map((item, index) => (
-            <MostRequestedRow
-              key={
-                item.track_id ||
-                `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`
-              }
-              item={item}
-              index={index}
-              updatingId={updatingId}
-              onPlayed={markMostRequestedPlayed}
-            />
-          ))}
+              {mostRequested.map((item, index) => (
+                <MostRequestedRow
+                  key={
+                    item.track_id ||
+                    `${item.custom_track_name ?? item.track_name}-${item.custom_artist_name ?? item.artist}`
+                  }
+                  item={item}
+                  index={index}
+                  updatingId={updatingId}
+                  onPlayed={markMostRequestedPlayed}
+                />
+              ))}
             </div>
           )}
         </section>
@@ -633,7 +697,7 @@ export default function RequestsList({
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
           {toBePlayed.length === 0 ? (
             <div className="px-4 py-4 text-sm text-white/45">
-              Zatiaľ nič pripravené na prehratie.
+              Nothing queued for playback yet.
             </div>
           ) : (
             <div className="divide-y divide-white/5">
@@ -665,7 +729,7 @@ export default function RequestsList({
 
         {incoming.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/45">
-            Žiadne nové requesty.
+            No new requests.
           </div>
         ) : (
           <div className="space-y-3">

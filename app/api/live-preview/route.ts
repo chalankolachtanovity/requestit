@@ -221,27 +221,49 @@ export async function GET(request: Request) {
     // ------------------------------------------------------------
     // CLASSIC
     // ------------------------------------------------------------
-    const { data: requestsData, error: requestsError } = await supabase
-      .from("requests")
-      .select(
-        "id, type, status, created_at, payment_attempt_id, track_id, custom_track_name, custom_artist_name"
-      )
-      .eq("session_id", sessionId)
-      .eq("status", "accepted")
-      .limit(100);
+    const [paidRequestsResult, freeRequestsResult] = await Promise.all([
+      supabase
+        .from("requests")
+        .select(
+          "id, type, status, created_at, payment_attempt_id, track_id, custom_track_name, custom_artist_name"
+        )
+        .eq("session_id", sessionId)
+        .eq("status", "accepted")
+        .eq("type", "paid"),
+      supabase
+        .from("requests")
+        .select(
+          "id, type, status, created_at, payment_attempt_id, track_id, custom_track_name, custom_artist_name"
+        )
+        .eq("session_id", sessionId)
+        .eq("status", "accepted")
+        .eq("type", "free")
+        .order("created_at", { ascending: true })
+        .limit(3),
+    ]);
 
-    if (requestsError) {
+    if (paidRequestsResult.error) {
       return NextResponse.json(
-        { error: requestsError.message },
+        { error: paidRequestsResult.error.message },
         { status: 500 }
       );
     }
 
-    const acceptedRequests = (requestsData ?? []) as RequestRow[];
+    if (freeRequestsResult.error) {
+      return NextResponse.json(
+        { error: freeRequestsResult.error.message },
+        { status: 500 }
+      );
+    }
 
-    const paidRequestAttemptIds = acceptedRequests
-      .filter((req) => req.type === "paid" && req.payment_attempt_id)
-      .map((req) => req.payment_attempt_id as string);
+    const acceptedRequests = [
+      ...((paidRequestsResult.data ?? []) as RequestRow[]),
+      ...((freeRequestsResult.data ?? []) as RequestRow[]),
+    ];
+
+    const paidRequestAttemptIds = (paidRequestsResult.data ?? [])
+      .map((req) => req.payment_attempt_id)
+      .filter((id): id is string => Boolean(id));
 
     const trackIds = Array.from(
       new Set(

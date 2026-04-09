@@ -1,0 +1,44 @@
+﻿ M app/[djSlug]/page.tsx
+ M app/api/confirm-priority-request/route.ts
+ M app/api/dashboard-overview/route.ts
+ M app/api/payment-attempt-session/route.ts
+ M app/api/profile/route.ts
+ M app/api/request-capture/route.ts
+ M app/api/request-reject/route.ts
+ M app/api/request-status/route.ts
+ M app/api/request/route.ts
+ M app/api/requests/route.ts
+ M app/api/session-settings/route.ts
+ M app/api/sessions/route.ts
+ M app/api/transactions/route.ts
+ M app/dashboard/admin/session/[sessionId]/page.tsx
+ M app/dashboard/admin/session/[sessionId]/settings/page.tsx
+ M app/dashboard/page.tsx
+ M app/dashboard/profile/page.tsx
+ M app/dashboard/transactions/page.tsx
+ M app/globals.css
+ M app/layout.tsx
+ M app/login/page.tsx
+ M app/page.tsx
+ M app/payment/cancel/page.tsx
+ M app/payment/success/page.tsx
+ M app/signup/page.tsx
+ M components/admin/CreateSessionForm.tsx
+ M components/admin/DashboardCredits.tsx
+ M components/admin/DashboardSubnav.tsx
+ M components/admin/DashboardTopRight.tsx
+ M components/admin/EditProfileForm.tsx
+ M components/admin/RequestsList.tsx
+ M components/admin/SessionCard.tsx
+ M components/admin/SessionSettingsPanel.tsx
+ M components/admin/SessionSubnav.tsx
+ M components/admin/SessionsList.tsx
+ M components/admin/TransactionsList.tsx
+ M components/guest/RequestButton.tsx
+ M components/guest/SearchBar.tsx
+ M components/marketing/ProductShowcase.tsx
+ M next.config.ts
+ M package.json
+?? .codex-backups/
+?? app/dashboard/layout.tsx
+?? lib/dashboard/

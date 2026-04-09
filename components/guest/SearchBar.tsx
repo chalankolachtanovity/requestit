@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
 import RequestButton from "@/components/guest/RequestButton";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ArrowUp } from "lucide-react";
@@ -158,12 +159,14 @@ const UpNextRow = memo(function UpNextRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-white/[0.04]">
-      <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-white/5">
+      <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-white/5">
         {item.image_url ? (
-          <img
+          <Image
             src={item.image_url}
             alt={item.track_name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="44px"
+            className="object-cover"
           />
         ) : (
           <NotesPlaceholder />
@@ -214,12 +217,14 @@ const SearchResultRow = memo(function SearchResultRow({
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-3 transition hover:bg-white/[0.04]">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-white/5">
+        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-white/5">
           {track.image_url ? (
-            <img
+            <Image
               src={track.image_url}
               alt={`${track.track_name} cover`}
-              className="h-full w-full object-cover"
+              fill
+              sizes="48px"
+              className="object-cover"
             />
           ) : (
             <NotesPlaceholder />
@@ -275,12 +280,14 @@ const MostRequestedRow = memo(function MostRequestedRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-1.5 py-2.5 transition hover:bg-white/[0.04]">
-      <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-white/5">
+      <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-white/5">
         {item.image_url ? (
-          <img
+          <Image
             src={item.image_url}
             alt={item.track_name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="44px"
+            className="object-cover"
           />
         ) : (
           <NotesPlaceholder />
@@ -352,7 +359,7 @@ export default function SearchBar({
   const [loading, setLoading] = useState(false);
 
   const [liveLoading, setLiveLoading] = useState(true);
-  const [liveRefreshing, setLiveRefreshing] = useState(false);
+  const [, setLiveRefreshing] = useState(false);
 
   const [animatedBadgeKeys, setAnimatedBadgeKeys] = useState<Set<string>>(
     new Set()
@@ -375,7 +382,6 @@ export default function SearchBar({
     mode === "classic"
   );
 
-  const trimmedQuery = query.trim();
   const trimmedSubmittedQuery = submittedQuery.trim();
   const isMostRequestedMode = mode === "most_requested";
 

@@ -23,13 +23,34 @@ export async function GET(request: Request) {
     const sessionId = searchParams.get("sessionId");
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: "Missing sessionId." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing sessionId." }, { status: 400 });
     }
 
     const supabase = await createSupabaseRouteClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const { data: ownedSession, error: sessionError } = await supabase
+      .from("sessions")
+      .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (sessionError) {
+      return NextResponse.json({ error: sessionError.message }, { status: 500 });
+    }
+
+    if (!ownedSession) {
+      return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    }
 
     const { data, error } = await supabase
       .from("requests")
@@ -49,6 +70,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq("session_id", sessionId)
+      .in("status", ["pending", "accepted"])
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -112,21 +134,27 @@ export async function GET(request: Request) {
         : null,
     }));
 
-    const incomingPaidRequests = mapped.filter(
-      (req) => req.type === "paid" && req.status === "pending"
-    );
+    const incomingPaidRequests: RequestRow[] = [];
+    const incomingFreeRequests: RequestRow[] = [];
+    const toBePlayedPaidRequests: RequestRow[] = [];
+    const toBePlayedFreeRequests: RequestRow[] = [];
 
-    const incomingFreeRequests = mapped.filter(
-      (req) => req.type === "free" && req.status === "pending"
-    );
+    for (const request of mapped) {
+      if (request.status === "pending") {
+        if (request.type === "paid") {
+          incomingPaidRequests.push(request);
+        } else {
+          incomingFreeRequests.push(request);
+        }
+        continue;
+      }
 
-    const toBePlayedPaidRequests = mapped.filter(
-      (req) => req.type === "paid" && req.status === "accepted"
-    );
-
-    const toBePlayedFreeRequests = mapped.filter(
-      (req) => req.type === "free" && req.status === "accepted"
-    );
+      if (request.type === "paid") {
+        toBePlayedPaidRequests.push(request);
+      } else {
+        toBePlayedFreeRequests.push(request);
+      }
+    }
 
     return NextResponse.json({
       incomingPaidRequests,
@@ -137,7 +165,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("REQUESTS GET ERROR:", error);
     return NextResponse.json(
-      { error: "Nepodarilo sa načítať requesty." },
+      { error: "Could not load requests." },
       { status: 500 }
     );
   }

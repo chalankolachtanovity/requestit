@@ -1,9 +1,6 @@
-import Image from "next/image";
 import { redirect, notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import SessionSettingsPanel from "@/components/admin/SessionSettingsPanel";
-import SessionSubnav from "@/components/admin/SessionSubnav";
-import DashboardTopRight from "@/components/admin/DashboardTopRight";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -30,7 +27,9 @@ export default async function AdminSessionSettingsPage({
 
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id, user_id, name, mode")
+    .select(
+      "id, user_id, name, mode, min_priority_amount_cents, allow_free_requests, allow_paid_requests"
+    )
     .eq("id", sessionId)
     .single();
 
@@ -46,64 +45,48 @@ export default async function AdminSessionSettingsPage({
     session.mode === "most_requested" ? "most_requested" : "classic";
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-start justify-between gap-4 px-4 py-3">
-          <Image
-            src="/black/logo_black.png"
-            alt="Requestit"
-            width={130}
-            height={30}
-            priority
-            className="h-14 w-auto"
-          />
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+            DJ Dashboard
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">Settings</h1>
 
-          <DashboardTopRight showBackToDashboard showCredits={false} />
-        </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70">
+              {session.name || "Unnamed Event"}
+            </span>
 
-        <div className="mx-auto max-w-5xl px-4 pb-3">
-          <SessionSubnav sessionId={sessionId} />
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-              DJ Dashboard
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">Settings</h1>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70">
-                {session.name || "Unnamed Event"}
-              </span>
-
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  sessionMode === "most_requested"
-                    ? "border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"
-                    : "border border-violet-300/20 bg-violet-400/10 text-violet-200"
-                }`}
-              >
-                {sessionMode === "most_requested"
-                  ? "Most Requested"
-                  : "Classic"}
-              </span>
-            </div>
-
-            <p className="mt-3 max-w-2xl text-sm text-white/45">
-              Typ eventu sa po vytvorení nemení. Tu upravuješ iba ostatné
-              nastavenia session.
-            </p>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                sessionMode === "most_requested"
+                  ? "border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"
+                  : "border border-violet-300/20 bg-violet-400/10 text-violet-200"
+              }`}
+            >
+              {sessionMode === "most_requested"
+                ? "Most Requested"
+                : "Classic"}
+            </span>
           </div>
-        </div>
 
-        <SessionSettingsPanel
-          sessionId={sessionId}
-          mode={sessionMode}
-        />
+          <p className="mt-3 max-w-2xl text-sm text-white/45">
+            Typ eventu sa po vytvoreni nemeni. Tu upravujes iba ostatne nastavenia session.
+          </p>
+        </div>
       </div>
-    </main>
+
+      <SessionSettingsPanel
+        sessionId={sessionId}
+        mode={sessionMode}
+        initialSettings={{
+          id: session.id,
+          min_priority_amount_cents: session.min_priority_amount_cents ?? 0,
+          allow_free_requests: session.allow_free_requests ?? true,
+          allow_paid_requests: session.allow_paid_requests ?? true,
+        }}
+      />
+    </div>
   );
 }

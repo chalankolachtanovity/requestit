@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Download, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Download, ExternalLink, Music4, Radio } from "lucide-react";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -51,9 +52,15 @@ export default function SessionCard({
   onChange: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [origin, setOrigin] = useState(process.env.NEXT_PUBLIC_APP_URL || "");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const guestUrl = `${appUrl}/${session.slug}`;
+  useEffect(() => {
+    if (!origin && typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, [origin]);
+
+  const guestUrl = origin ? `${origin}/${session.slug}` : `/${session.slug}`;
 
   const qrUrl = useMemo(() => {
     return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
@@ -72,14 +79,14 @@ export default function SessionCard({
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.error || "Nepodarilo sa ukončiť event.");
+        alert(result.error || "Nepodarilo sa ukoncit event.");
         return;
       }
 
       onChange();
     } catch (error) {
       console.error("END SESSION ERROR:", error);
-      alert("Nepodarilo sa ukončiť event.");
+      alert("Nepodarilo sa ukoncit event.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +108,7 @@ export default function SessionCard({
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("QR DOWNLOAD ERROR:", error);
-      alert("Nepodarilo sa stiahnuť QR kód.");
+      alert("Nepodarilo sa stiahnut QR kod.");
     }
   };
 
@@ -111,8 +118,12 @@ export default function SessionCard({
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0 flex-1">
             <div className="mb-3 flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.04] text-lg">
-                🎧
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.04] text-white/72">
+                {session.is_active ? (
+                  <Radio className="h-5 w-5" />
+                ) : (
+                  <Music4 className="h-5 w-5" />
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -141,13 +152,7 @@ export default function SessionCard({
                 </div>
 
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/38">
-                  
-                  {session.starts_at ? (
-                    <>
-                      
-                      <span>{formatSessionDate(session.starts_at)}</span>
-                    </>
-                  ) : null}
+                  {session.starts_at ? <span>{formatSessionDate(session.starts_at)}</span> : null}
                 </div>
               </div>
             </div>
@@ -155,7 +160,7 @@ export default function SessionCard({
             <div className="mb-4 flex flex-wrap gap-2">
               {session.mode !== "most_requested" ? (
                 <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs text-white/72">
-                  Min {(session.min_priority_amount_cents / 100).toFixed(2)} €
+                  Min {(session.min_priority_amount_cents / 100).toFixed(2)} EUR
                 </span>
               ) : null}
 
@@ -185,9 +190,17 @@ export default function SessionCard({
                 href={`/dashboard/admin/session/${session.id}`}
                 className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02] hover:opacity-95"
               >
-                {session.mode === "most_requested"
-                  ? "Open Queue"
-                  : "Open Queue"}
+                Open Queue
+              </Link>
+
+              <Link
+                href={`/${session.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Guest page
               </Link>
 
               {session.is_active ? (

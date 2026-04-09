@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { getSessionsData } from "@/lib/dashboard-data";
 
 type SessionMode = "classic" | "most_requested";
 
@@ -16,15 +17,6 @@ type SessionRow = {
   created_at: string;
   earned_cents: number;
   requests_count: number;
-};
-
-type PaymentAttemptRow = {
-  session_id: string;
-  amount_cents: number | null;
-};
-
-type RequestRow = {
-  session_id: string;
 };
 
 function createShortSlug(length = 6) {
@@ -51,85 +43,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-      .from("sessions")
-      .select(
-        "id, name, slug, is_active, mode, min_priority_amount_cents, allow_free_requests, allow_paid_requests, starts_at, created_at"
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const sessions = (data ?? []) as Omit<
-      SessionRow,
-      "earned_cents" | "requests_count"
-    >[];
-    const sessionIds = sessions.map((s) => s.id);
-
-    let earnedMap = new Map<string, number>();
-    let requestsCountMap = new Map<string, number>();
-
-    if (sessionIds.length > 0) {
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from("payment_attempts")
-        .select("session_id, amount_cents")
-        .in("session_id", sessionIds)
-        .eq("payment_status", "captured")
-        .eq("dj_decision", "accepted");
-
-      if (paymentsError) {
-        return NextResponse.json(
-          { error: paymentsError.message },
-          { status: 500 }
-        );
-      }
-
-      const payments = (paymentsData ?? []) as PaymentAttemptRow[];
-
-      earnedMap = payments.reduce((map, payment) => {
-        const current = map.get(payment.session_id) ?? 0;
-        map.set(payment.session_id, current + (payment.amount_cents ?? 0));
-        return map;
-      }, new Map<string, number>());
-
-      const { data: requestsData, error: requestsError } = await supabase
-        .from("requests")
-        .select("session_id")
-        .in("session_id", sessionIds);
-
-      if (requestsError) {
-        return NextResponse.json(
-          { error: requestsError.message },
-          { status: 500 }
-        );
-      }
-
-      const requests = (requestsData ?? []) as RequestRow[];
-
-      requestsCountMap = requests.reduce((map, request) => {
-        const current = map.get(request.session_id) ?? 0;
-        map.set(request.session_id, current + 1);
-        return map;
-      }, new Map<string, number>());
-    }
-
-    const sessionsWithData: SessionRow[] = sessions.map((session) => ({
-      ...session,
-      mode: session.mode ?? "classic",
-      earned_cents: earnedMap.get(session.id) ?? 0,
-      requests_count: requestsCountMap.get(session.id) ?? 0,
-    }));
-
     return NextResponse.json({
-      sessions: sessionsWithData,
+      sessions: await getSessionsData(supabase),
     });
   } catch (error) {
     console.error("SESSIONS GET ERROR:", error);
     return NextResponse.json(
-      { error: "Nepodarilo sa načítať sessions." },
+      { error: "Could not load sessions." },
       { status: 500 }
     );
   }
@@ -164,7 +84,7 @@ export async function POST(request: Request) {
       minPriorityAmountCents < 0
     ) {
       return NextResponse.json(
-        { error: "Neplatná minimálna suma." },
+        { error: "Invalid minimum amount." },
         { status: 400 }
       );
     }
@@ -174,14 +94,14 @@ export async function POST(request: Request) {
       typeof allowPaidRequests !== "boolean"
     ) {
       return NextResponse.json(
-        { error: "Neplatné nastavenia requestov." },
+        { error: "Invalid request settings." },
         { status: 400 }
       );
     }
 
     if (startsAt && Number.isNaN(new Date(startsAt).getTime())) {
       return NextResponse.json(
-        { error: "Neplatný dátum začiatku." },
+        { error: "Invalid event start date." },
         { status: 400 }
       );
     }
@@ -232,7 +152,7 @@ export async function POST(request: Request) {
 
     if (!sessionSlug || slugExists) {
       return NextResponse.json(
-        { error: "Nepodarilo sa vytvoriť unikátny slug." },
+        { error: "Could not generate a unique slug." },
         { status: 500 }
       );
     }
@@ -264,7 +184,7 @@ export async function POST(request: Request) {
 
     if (error || !sessionData) {
       return NextResponse.json(
-        { error: error?.message || "Nepodarilo sa vytvoriť session." },
+        { error: error?.message || "Could not create the session." },
         { status: 500 }
       );
     }
@@ -281,7 +201,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("SESSIONS POST ERROR:", error);
     return NextResponse.json(
-      { error: "Nepodarilo sa vytvoriť session." },
+      { error: "Could not create the session." },
       { status: 500 }
     );
   }

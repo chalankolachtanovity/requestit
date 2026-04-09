@@ -14,7 +14,7 @@ export default function AdminHomePage() {
           </p>
         </div>
 
-        <SessionsList />
+        <SessionsList initialSessions={[]} />
       </div>
     </main>
   );

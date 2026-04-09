@@ -1,65 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import type { SessionSettingsData } from "@/lib/dashboard-data";
 
 type SessionMode = "classic" | "most_requested";
-
-type SessionSettings = {
-  id: string;
-  min_priority_amount_cents: number;
-  allow_free_requests: boolean;
-  allow_paid_requests: boolean;
-};
 
 export default function SessionSettingsPanel({
   sessionId,
   mode,
+  initialSettings,
 }: {
   sessionId: string;
   mode: SessionMode;
+  initialSettings: SessionSettingsData;
 }) {
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-
-  const [minPriorityEuro, setMinPriorityEuro] = useState("2.00");
-  const [allowFreeRequests, setAllowFreeRequests] = useState(true);
-  const [allowPaidRequests, setAllowPaidRequests] = useState(true);
+  const [minPriorityEuro, setMinPriorityEuro] = useState(
+    (initialSettings.min_priority_amount_cents / 100).toFixed(2)
+  );
+  const [allowFreeRequests, setAllowFreeRequests] = useState(
+    initialSettings.allow_free_requests
+  );
+  const [allowPaidRequests, setAllowPaidRequests] = useState(
+    initialSettings.allow_paid_requests
+  );
 
   const isMostRequestedMode = mode === "most_requested";
-
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      setMessage("");
-
-      const response = await fetch(
-        `/api/session-settings?sessionId=${encodeURIComponent(sessionId)}`
-      );
-      const result: SessionSettings | { error: string } =
-        await response.json();
-
-      if (!response.ok || !("id" in result)) {
-        setMessage("Nepodarilo sa načítať nastavenia.");
-        return;
-      }
-
-      setMinPriorityEuro(
-        (result.min_priority_amount_cents / 100).toFixed(2)
-      );
-      setAllowFreeRequests(result.allow_free_requests);
-      setAllowPaidRequests(result.allow_paid_requests);
-    } catch (error) {
-      console.error("SETTINGS FETCH ERROR:", error);
-      setMessage("Nepodarilo sa načítať nastavenia.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSettings();
-  }, [sessionId]);
 
   const handleSave = async () => {
     try {
@@ -69,7 +36,7 @@ export default function SessionSettingsPanel({
       const parsed = Number(minPriorityEuro.replace(",", "."));
 
       if (Number.isNaN(parsed) || parsed < 0) {
-        setMessage("Zadaj platnú minimálnu sumu.");
+        setMessage("Zadaj platnĂş minimĂˇlnu sumu.");
         return;
       }
 
@@ -97,7 +64,7 @@ export default function SessionSettingsPanel({
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(result.error || "Nepodarilo sa uložiť nastavenia.");
+        setMessage(result.error || "Nepodarilo sa uloĹľiĹĄ nastavenia.");
         return;
       }
 
@@ -106,22 +73,14 @@ export default function SessionSettingsPanel({
         setAllowPaidRequests(false);
       }
 
-      setMessage("Nastavenia uložené.");
+      setMessage("Nastavenia uloĹľenĂ©.");
     } catch (error) {
       console.error("SETTINGS SAVE ERROR:", error);
-      setMessage("Nepodarilo sa uložiť nastavenia.");
+      setMessage("Nepodarilo sa uloĹľiĹĄ nastavenia.");
     } finally {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/60">
-        Načítavam nastavenia...
-      </div>
-    );
-  }
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -147,7 +106,7 @@ export default function SessionSettingsPanel({
             </span>
           </div>
           <p className="mt-2 text-xs text-white/40">
-            Typ eventu sa po vytvorení nedá meniť.
+            Typ eventu sa po vytvorenĂ­ nedĂˇ meniĹĄ.
           </p>
         </div>
 
@@ -159,31 +118,31 @@ export default function SessionSettingsPanel({
             type="text"
             inputMode="decimal"
             value={isMostRequestedMode ? "0.00" : minPriorityEuro}
-            onChange={(e) => setMinPriorityEuro(e.target.value)}
+            onChange={(event) => setMinPriorityEuro(event.target.value)}
             placeholder="2.00"
             disabled={isMostRequestedMode}
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/30 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <p className="mt-2 text-xs text-white/40">
             {isMostRequestedMode
-              ? "V Most Requested režime sú priority requesty vypnuté."
-              : "Toto je minimálna suma, ktorú musí user zaplatiť za priority request."}
+              ? "V Most Requested reĹľime sĂş priority requesty vypnutĂ©."
+              : "Toto je minimĂˇlna suma, ktorĂş musĂ­ user zaplatiĹĄ za priority request."}
           </p>
         </div>
 
         <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-3">
           <div>
-            <p className="text-sm font-medium text-white">Povoliť free requesty</p>
+            <p className="text-sm font-medium text-white">PovoliĹĄ free requesty</p>
             <p className="text-xs text-white/40">
               {isMostRequestedMode
-                ? "Hostia budú posielať hlasy zadarmo."
-                : "Ak vypneš, hostia budú môcť posielať len platené requesty."}
+                ? "Hostia budĂş posielaĹĄ hlasy zadarmo."
+                : "Ak vypneĹˇ, hostia budĂş mĂ´cĹĄ posielaĹĄ len platenĂ© requesty."}
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => setAllowFreeRequests((prev) => !prev)}
+            onClick={() => setAllowFreeRequests((previous) => !previous)}
             className={`relative h-7 w-12 rounded-full transition ${
               allowFreeRequests ? "bg-green-500" : "bg-white/15"
             }`}
@@ -202,11 +161,11 @@ export default function SessionSettingsPanel({
           }`}
         >
           <div>
-            <p className="text-sm font-medium text-white">Povoliť paid requesty</p>
+            <p className="text-sm font-medium text-white">PovoliĹĄ paid requesty</p>
             <p className="text-xs text-white/40">
               {isMostRequestedMode
-                ? "V Most Requested režime sú paid requesty pevne vypnuté."
-                : "Ak vypneš, hostia nebudú môcť platiť za prioritu."}
+                ? "V Most Requested reĹľime sĂş paid requesty pevne vypnutĂ©."
+                : "Ak vypneĹˇ, hostia nebudĂş mĂ´cĹĄ platiĹĄ za prioritu."}
             </p>
           </div>
 
@@ -214,14 +173,14 @@ export default function SessionSettingsPanel({
             type="button"
             onClick={() => {
               if (isMostRequestedMode) return;
-              setAllowPaidRequests((prev) => !prev);
+              setAllowPaidRequests((previous) => !previous);
             }}
             className={`relative h-7 w-12 rounded-full transition ${
               isMostRequestedMode
                 ? "cursor-not-allowed bg-white/10"
                 : allowPaidRequests
-                ? "bg-green-500"
-                : "bg-white/15"
+                  ? "bg-green-500"
+                  : "bg-white/15"
             }`}
           >
             <span
@@ -229,8 +188,8 @@ export default function SessionSettingsPanel({
                 isMostRequestedMode
                   ? "left-1"
                   : allowPaidRequests
-                  ? "left-6"
-                  : "left-1"
+                    ? "left-6"
+                    : "left-1"
               }`}
             />
           </button>
@@ -242,12 +201,10 @@ export default function SessionSettingsPanel({
             disabled={saving}
             className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
           >
-            {saving ? "Ukladám..." : "Uložiť"}
+            {saving ? "UkladĂˇm..." : "UloĹľiĹĄ"}
           </button>
 
-          {message ? (
-            <p className="text-sm text-white/60">{message}</p>
-          ) : null}
+          {message ? <p className="text-sm text-white/60">{message}</p> : null}
         </div>
       </div>
     </section>

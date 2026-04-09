@@ -1,23 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import CreateSessionForm from "./CreateSessionForm";
 import SessionCard from "./SessionCard";
-
-type SessionItem = {
-  id: string;
-  name: string | null;
-  slug: string;
-  is_active: boolean;
-  min_priority_amount_cents: number;
-  allow_free_requests: boolean;
-  allow_paid_requests: boolean;
-  starts_at: string | null;
-  created_at: string;
-  earned_cents: number;
-  requests_count: number;
-  mode: "classic" | "most_requested";
-};
+import type { SessionItem } from "@/lib/dashboard-data";
 
 type SessionsResponse = {
   sessions: SessionItem[];
@@ -75,8 +61,12 @@ function PastSessionCard({ session }: { session: SessionItem }) {
   );
 }
 
-export default function SessionsList() {
-  const [sessions, setSessions] = useState<SessionItem[]>([]);
+export default function SessionsList({
+  initialSessions,
+}: {
+  initialSessions: SessionItem[];
+}) {
+  const [sessions, setSessions] = useState<SessionItem[]>(initialSessions);
   const [openCreate, setOpenCreate] = useState(false);
 
   const fetchSessions = async () => {
@@ -84,10 +74,6 @@ export default function SessionsList() {
     const data: SessionsResponse = await res.json();
     setSessions(data.sessions || []);
   };
-
-  useEffect(() => {
-    fetchSessions();
-  }, []);
 
   const activeSessions = useMemo(
     () => sessions.filter((s) => s.is_active),

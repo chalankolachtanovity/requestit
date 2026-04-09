@@ -2,48 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Headphones, Wallet2 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
-
-type OverviewResponse = {
-  account: {
-    email: string | null;
-    displayName: string | null;
-  };
-  creditsCents: number;
-};
+import type { DashboardOverviewData } from "@/lib/dashboard-data";
 
 export default function DashboardTopRight({
   showBackToDashboard = false,
   showCredits = true,
+  initialOverview,
 }: {
   showBackToDashboard?: boolean;
   showCredits?: boolean;
+  initialOverview: DashboardOverviewData;
 }) {
-  const [creditsCents, setCreditsCents] = useState(0);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
+  const shouldShowBackToDashboard =
+    showBackToDashboard ?? pathname.startsWith("/dashboard/admin/session/");
 
-  useEffect(() => {
-    const fetchOverview = async () => {
-      try {
-        const response = await fetch("/api/dashboard-overview");
-        const result: OverviewResponse | { error: string } = await response.json();
-
-        if (!response.ok || !("account" in result)) return;
-
-        setDisplayName(result.account.displayName);
-        setEmail(result.account.email);
-        setCreditsCents(result.creditsCents ?? 0);
-      } catch (error) {
-        console.error("DASHBOARD TOP RIGHT FETCH ERROR:", error);
-      }
-    };
-
-    fetchOverview();
-  }, []);
+  const creditsCents = initialOverview.creditsCents ?? 0;
+  const displayName = initialOverview.account.displayName ?? null;
+  const email = initialOverview.account.email ?? null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -60,44 +42,45 @@ export default function DashboardTopRight({
   }, []);
 
   return (
-    <div ref={wrapperRef} className="relative flex flex-col items-end gap-2">
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex flex-col items-center gap-2"
-      >
-        <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg transition hover:bg-white/[0.08]">
-          🎧
-        </div>
-
-        <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
-          ACCOUNT
-        </p>
-
-        {showCredits ? (
-          <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">
+    <div ref={wrapperRef} className="relative flex items-center gap-2">
+      {showCredits ? (
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/10 text-emerald-200">
+            <Wallet2 className="h-3.5 w-3.5" />
+          </div>
+          <div className="leading-none">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-white/38">
               Credits
             </p>
-            <p className="text-sm font-bold text-green-300">
-              {(creditsCents / 100).toFixed(2)} €
+            <p className="mt-1 text-sm font-semibold text-emerald-200">
+              {(creditsCents / 100).toFixed(2)} EUR
             </p>
           </div>
-        ) : null}
+        </div>
+      ) : null}
+
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/80 transition hover:bg-white/[0.08] hover:text-white"
+        aria-label="Account menu"
+        title="Account menu"
+      >
+        <Headphones className="h-5 w-5" />
       </button>
 
       {open ? (
         <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0f0f10] p-3 shadow-2xl">
           <div className="border-b border-white/10 pb-3">
             <p className="truncate text-sm font-semibold text-white">
-              {displayName || "DJ účet"}
+              {displayName || "DJ account"}
             </p>
             <p className="mt-1 truncate text-xs text-white/45">
-              {email || "Bez emailu"}
+              {email || "No email"}
             </p>
           </div>
 
           <div className="mt-3 space-y-2">
-            {showBackToDashboard ? (
+            {shouldShowBackToDashboard ? (
               <Link
                 href="/dashboard"
                 className="block rounded-xl px-3 py-2 text-sm text-white/80 transition hover:bg-white/[0.06]"
