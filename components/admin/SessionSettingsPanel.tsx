@@ -36,7 +36,7 @@ export default function SessionSettingsPanel({
       const parsed = Number(minPriorityEuro.replace(",", "."));
 
       if (Number.isNaN(parsed) || parsed < 0) {
-        setMessage("Zadaj platnĂş minimĂˇlnu sumu.");
+        setMessage("Zadaj platnu minimalnu sumu.");
         return;
       }
 
@@ -64,7 +64,7 @@ export default function SessionSettingsPanel({
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(result.error || "Nepodarilo sa uloĹľiĹĄ nastavenia.");
+        setMessage(result.error || "Nepodarilo sa ulozit nastavenia.");
         return;
       }
 
@@ -73,10 +73,10 @@ export default function SessionSettingsPanel({
         setAllowPaidRequests(false);
       }
 
-      setMessage("Nastavenia uloĹľenĂ©.");
+      setMessage("Nastavenia ulozene.");
     } catch (error) {
       console.error("SETTINGS SAVE ERROR:", error);
-      setMessage("Nepodarilo sa uloĹľiĹĄ nastavenia.");
+      setMessage("Nepodarilo sa ulozit nastavenia.");
     } finally {
       setSaving(false);
     }
@@ -106,7 +106,7 @@ export default function SessionSettingsPanel({
             </span>
           </div>
           <p className="mt-2 text-xs text-white/40">
-            Typ eventu sa po vytvorenĂ­ nedĂˇ meniĹĄ.
+            Typ eventu sa po vytvoreni neda menit.
           </p>
         </div>
 
@@ -125,18 +125,20 @@ export default function SessionSettingsPanel({
           />
           <p className="mt-2 text-xs text-white/40">
             {isMostRequestedMode
-              ? "V Most Requested reĹľime sĂş priority requesty vypnutĂ©."
-              : "Toto je minimĂˇlna suma, ktorĂş musĂ­ user zaplatiĹĄ za priority request."}
+              ? "V Most Requested rezime su priority requesty vypnute."
+              : "Toto je minimalna suma, ktoru musi user zaplatit za priority request."}
           </p>
         </div>
 
         <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-3">
           <div>
-            <p className="text-sm font-medium text-white">PovoliĹĄ free requesty</p>
+            <p className="text-sm font-medium text-white">
+              Povolit free requesty
+            </p>
             <p className="text-xs text-white/40">
               {isMostRequestedMode
-                ? "Hostia budĂş posielaĹĄ hlasy zadarmo."
-                : "Ak vypneĹˇ, hostia budĂş mĂ´cĹĄ posielaĹĄ len platenĂ© requesty."}
+                ? "Hostia budu posielat hlasy zadarmo."
+                : "Ak vypnes, hostia budu moct posielat len platene requesty."}
             </p>
           </div>
 
@@ -161,11 +163,13 @@ export default function SessionSettingsPanel({
           }`}
         >
           <div>
-            <p className="text-sm font-medium text-white">PovoliĹĄ paid requesty</p>
+            <p className="text-sm font-medium text-white">
+              Povolit paid requesty
+            </p>
             <p className="text-xs text-white/40">
               {isMostRequestedMode
-                ? "V Most Requested reĹľime sĂş paid requesty pevne vypnutĂ©."
-                : "Ak vypneĹˇ, hostia nebudĂş mĂ´cĹĄ platiĹĄ za prioritu."}
+                ? "V Most Requested rezime su paid requesty pevne vypnute."
+                : "Ak vypnes, hostia nebudu moct platit za prioritu."}
             </p>
           </div>
 
@@ -201,7 +205,7 @@ export default function SessionSettingsPanel({
             disabled={saving}
             className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
           >
-            {saving ? "UkladĂˇm..." : "UloĹľiĹĄ"}
+            {saving ? "Ukladam..." : "Ulozit"}
           </button>
 
           {message ? <p className="text-sm text-white/60">{message}</p> : null}

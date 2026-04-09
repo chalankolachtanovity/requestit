@@ -4,6 +4,15 @@ import Image from "next/image";
 import { useMemo } from "react";
 import type { TransactionItem } from "@/lib/dashboard-data";
 
+const eurFormatter = new Intl.NumberFormat("sk-SK", {
+  style: "currency",
+  currency: "EUR",
+});
+
+function formatEur(amountCents: number) {
+  return eurFormatter.format(amountCents / 100);
+}
+
 function TransactionRow({ item }: { item: TransactionItem }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -26,13 +35,13 @@ function TransactionRow({ item }: { item: TransactionItem }) {
 
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-white">
-            {item.track?.track_name ?? "NeznĂˇma pesniÄŤka"}
+            {item.track?.track_name ?? "Neznama pesnicka"}
           </p>
           <p className="truncate text-xs text-white/50">
-            {item.track?.artist ?? "NeznĂˇmy interpret"}
+            {item.track?.artist ?? "Neznamy interpret"}
           </p>
           <p className="mt-1 truncate text-xs text-white/35">
-            {item.session?.name || "Unnamed Session"} Â·{" "}
+            {item.session?.name || "Unnamed Session"} ·{" "}
             {new Date(item.created_at).toLocaleString("sk-SK")}
           </p>
         </div>
@@ -40,7 +49,7 @@ function TransactionRow({ item }: { item: TransactionItem }) {
 
       <div className="text-right">
         <p className="text-lg font-bold text-green-300">
-          {(item.amount_cents / 100).toFixed(2)} â‚¬
+          {formatEur(item.amount_cents)}
         </p>
         <p className="text-xs text-white/40">captured</p>
       </div>
@@ -74,14 +83,14 @@ export default function TransactionsList({
             Total
           </p>
           <p className="text-xl font-bold text-green-300">
-            {(totalCents / 100).toFixed(2)} â‚¬
+            {formatEur(totalCents)}
           </p>
         </div>
       </div>
 
       {initialTransactions.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/45">
-          ZatiaÄľ nemĂˇĹˇ Ĺľiadne uskutoÄŤnenĂ© platby.
+          Zatial nemas ziadne uskutocnene platby.
         </div>
       ) : (
         <div className="space-y-3">
